@@ -26,9 +26,16 @@ Change:      None to strategy rules. Funding history fetched at 4h aggregation s
              whole 90-day window is covered in one page (was truncated to ~42 days).
 Hypothesis:  Removes the 11 "funding_window_rate_unknown" exits; everything else equal.
 Baseline:    v0.3.0 run pbrun-57c1bdab4a5e.
-Window:      to be run — same window and symbols as v0.3.0
-Result:      not yet run → verdict PENDING
-Decision:    run sandbox evaluation; no live run before PASS
+Window:      2026-08-11 17:15 → 2026-11-09 17:15 UTC, BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT
+             (run pbrun-16e2dea33de4, platform status completed; funding coverage 539 rows
+             per symbol from 2026-08-12, no degraded symbols)
+Result:      RTs=149 PF=0.83 (engine fill-based PF 1.25) DD=11.4 % of budget, win rate 46 %,
+             net −77.9 USDT on 1,000 USDT → FAIL on PF and DD.
+             Exits: stop 60, target 39, time stop 33, funding (pays) 16, daily cap 1;
+             15 positions kept through a settlement they received funding on.
+Decision:    FAIL. Funding rule is now fully specified and evidenced; it is not the main
+             cost. Stops (60) vs targets (39) and 33 time stops point at entry quality:
+             next single change = Signal A trigger band (v0.4), pending owner go-ahead.
 
 Pipeline correction shipped with v0.3.0: warm-up bars are now fed to the
 strategy (entries blocked until the replay window starts) so the 4H regime
