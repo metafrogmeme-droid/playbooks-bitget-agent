@@ -1,10 +1,12 @@
 """NautilusTrader replay strategy for RUNECLAW Intraday Session Flow.
 
-Rule logic is NOT re-implemented here.  The replay engine injects, per
-instrument, the feature frame built by ``features.compute_features`` (same
-code the live path runs) and this class applies the identical gates
-(``features.regime_ok``, ``risk.can_open_new``, ``features.detect_signals``,
-``risk.size_from_risk``, ``risk.trail_stop`` ...) bar by bar.
+Rule logic is NOT re-implemented here.  Features are computed bar by bar with
+``features.IncrementalFeatures`` (unit-tested to equal the vectorized
+``features.compute_features`` the live path uses) and this class applies the
+identical gates (``features.regime_ok``, ``risk.can_open_new``,
+``features.detect_signals``, ``risk.size_from_risk``, ``risk.trail_stop`` ...).
+The strategy therefore needs nothing but raw OHLCV bars, which is what the
+platform's own evidence replay supplies.
 
 Replay-specific simplifications (documented in docs/PSEUDOCODE.md):
 * spread gate is live-only (no L1 history); the 24h volume gate uses the
@@ -34,7 +36,7 @@ from . import features, risk
 from .params import PlaybookParams, signal_id
 
 BAR_NS = 15 * 60 * 1_000_000_000
-OUTPUT_DIR = Path("/workspace/output")
+OUTPUT_DIR = Path("output")  # package-relative
 
 
 class RuneclawSessionFlowConfig(StrategyConfig):
@@ -50,8 +52,7 @@ class RuneclawSessionFlow(Strategy):
         super().__init__(config)
         self.cfg = config
         self.params = PlaybookParams.from_config(config.strategy_params or {})
-        self.feature_frames: dict[str, pd.DataFrame] = {}
-        self._lookup: dict[str, dict[int, dict[str, Any]]] = {}
+        self._features: dict[str, features.IncrementalFeatures] = {}
         self._instruments: dict[str, Instrument] = {}
         self._iid_by_symbol: dict[str, InstrumentId] = {}
         self.ledger = risk.DailyLedger()
@@ -63,36 +64,21 @@ class RuneclawSessionFlow(Strategy):
         self.stats: dict[str, Any] = {
             "round_trips": 0, "wins": 0, "losses": 0, "gross_profit": 0.0, "gross_loss": 0.0,
             "exit_reasons": {}, "entries_placed": 0, "entries_expired": 0, "gate_blocks": {},
-            "feature_rows_missing": 0,
         }
 
     # ------------------------------------------------------------------ wiring
-    def set_feature_frames(self, feature_frames: dict[str, pd.DataFrame]) -> None:
-        self.feature_frames = dict(feature_frames or {})
-        self._lookup = {}
-
-    def _build_lookup(self, key: str) -> None:
-        frame = self.feature_frames.get(key)
-        if frame is None:
-            self._lookup[key] = {}
-            return
-        cols = [c for c in ("open", "high", "low", "close", "volume", *features.FEATURE_COLUMNS) if c in frame.columns]
-        index = frame.index
-        if getattr(index, "tz", None) is None:
-            index = index.tz_localize("UTC")
-        self._lookup[key] = dict(zip(index.asi8.tolist(), frame[cols].to_dict("records")))
-
-    def _feature_row(self, iid: InstrumentId, bar: Bar) -> tuple[dict[str, Any] | None, int]:
+    def _feature_row(self, iid: InstrumentId, bar: Bar) -> tuple[dict[str, Any], int]:
+        """Update the per-instrument incremental features with this closed bar.
+        Nautilus EXTERNAL bars built from open-time-indexed frames carry the
+        bar OPEN time in ts_event."""
         key = iid.value
-        if key not in self._lookup:
-            self._build_lookup(key)
-        table = self._lookup.get(key) or {}
-        for candidate in (bar.ts_event, bar.ts_event - BAR_NS, bar.ts_init, bar.ts_init - BAR_NS):
-            row = table.get(int(candidate))
-            if row is not None:
-                return row, int(candidate)
-        self.stats["feature_rows_missing"] += 1
-        return None, int(bar.ts_event)
+        engine = self._features.get(key)
+        if engine is None:
+            engine = self._features[key] = features.IncrementalFeatures(self.params)
+        open_ns = int(bar.ts_event)
+        open_ts = unix_nanos_to_dt(open_ns).to_pydatetime()
+        row = engine.update(open_ts, float(bar.open), float(bar.high), float(bar.low), float(bar.close), float(bar.volume))
+        return row, open_ns
 
     def on_start(self) -> None:
         ids: list[InstrumentId] = []
@@ -125,8 +111,6 @@ class RuneclawSessionFlow(Strategy):
         iid = bar.bar_type.instrument_id
         symbol = iid.symbol.value
         row, open_ns = self._feature_row(iid, bar)
-        if row is None:
-            return
         now = unix_nanos_to_dt(open_ns + BAR_NS)   # decisions happen at bar close
         if self.ledger.roll(now):
             pass
@@ -219,7 +203,7 @@ class RuneclawSessionFlow(Strategy):
             if vwap is not None and vwap == vwap:
                 new_target = instrument.make_price(float(vwap))
                 tp = self.cache.order(ClientOrderId(trade["tp_coid"])) if trade.get("tp_coid") else None
-                if tp is not None and tp.is_open and tp.price != new_target:
+                if tp is not None and tp.is_open and float(tp.price) != float(new_target):
                     self.modify_order(tp, price=new_target)
                     trade["target"] = float(new_target)
                     self._log(trade["signal_id"], now, symbol, trade["side"], "target_modified", tp.client_order_id.value,
@@ -233,6 +217,9 @@ class RuneclawSessionFlow(Strategy):
                 sl = self.cache.order(ClientOrderId(trade["sl_coid"])) if trade.get("sl_coid") else None
                 if sl is not None and sl.is_open:
                     trigger = instrument.make_price(new_stop)
+                    if float(trigger) == float(sl.trigger_price):
+                        trade["stop"] = float(trigger)   # quantized to the same tick; nothing to send
+                        return
                     self.modify_order(sl, trigger_price=trigger)
                     trade["stop"] = float(trigger)
                     self._log(trade["signal_id"], now, symbol, trade["side"], "stop_modified", sl.client_order_id.value,
@@ -300,7 +287,7 @@ class RuneclawSessionFlow(Strategy):
             # partial fill continuation: resize protective orders to the live position
             for key in ("sl_coid", "tp_coid"):
                 order = self.cache.order(ClientOrderId(trade[key]))
-                if order is not None and order.is_open and order.quantity != qty:
+                if order is not None and order.is_open and float(order.quantity) != float(qty):
                     self.modify_order(order, quantity=qty)
             trade["qty"] = float(qty)
         entry = self.cache.order(ClientOrderId(pend["client_order_id"]))

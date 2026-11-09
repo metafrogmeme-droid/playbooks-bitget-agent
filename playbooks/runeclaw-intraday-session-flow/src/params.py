@@ -15,7 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, fields
 from typing import Any
 
-PLAYBOOK_VERSION = "0.1.0"
+PLAYBOOK_VERSION = "0.2.0"
 DECISION_INTERVAL_MINUTES = 15  # 15m execution bars and 15m live cadence
 
 
@@ -30,7 +30,7 @@ def _as_tuple(value: Any, cast=str) -> tuple:
 @dataclass(frozen=True)
 class PlaybookParams:
     # --- universe / sizing -------------------------------------------------
-    trading_symbols: tuple[str, ...] = ("BTCUSDT", "ETHUSDT", "SOLUSDT")
+    trading_symbols: tuple[str, ...] = ("BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT")
     margin_budget: float = 1000.0          # USDT; risk denominator + platform return basis
     leverage: int = 3
     risk_pct_per_trade: float = 0.5        # % of margin_budget risked between entry and stop
@@ -78,6 +78,7 @@ class PlaybookParams:
     halt_on_reconcile_mismatch: bool = True
     backtest_days: int = 90
     warmup_days: int = 5
+    max_backtest_symbols: int = 4   # 180 s sandbox budget: ~20 s data + replay per symbol
 
     @classmethod
     def from_config(cls, cfg: dict[str, Any] | None) -> "PlaybookParams":

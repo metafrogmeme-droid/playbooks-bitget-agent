@@ -1,6 +1,10 @@
-# RUNECLAW Intraday Session Flow (v0.1)
+# RUNECLAW Intraday Session Flow (v0.2)
 
-Day-trading Playbook for Bitget USDT-M perpetuals (BTCUSDT, ETHUSDT, SOLUSDT).
+Day-trading Playbook for the most liquid Bitget USDT-M perpetuals. The universe
+is every contract that passed the liquidity scan (24h volume ≥ 200M USDT,
+spread ≤ 3 bps): BTCUSDT, ETHUSDT, SOLUSDT and XRPUSDT by default, with the
+three RWA stock-token perpetuals that also passed (SOXLUSDT, SNDKUSDT, KORUUSDT)
+available as opt-in symbols.
 Every position is flat before 00:00 UTC. Two signals, one regime filter, two
 session windows, hard risk limits, and a full order journal with reconciliation.
 
@@ -31,7 +35,8 @@ too wild is event risk; both are skipped).
 Position size risks 0.5 % of the margin budget between entry and stop. At most
 two positions are open at once and at most three trades per symbol per day.
 Entries are refused outside the session windows, in the pre-funding window,
-when 24h volume is below 200M USDT, or when the spread exceeds 3 bps.
+when 24h volume is below 200M USDT, or when the spread exceeds 3 bps, so a
+symbol that loses liquidity drops out of the universe automatically.
 
 ## 平仓 / Exit
 
@@ -54,7 +59,8 @@ close-position call.
 ## Parameters
 
 Subscribers may tune: trading symbols, margin budget, leverage, risk per trade,
-daily loss cap, maximum concurrent positions and the backtest window. Signal
+daily loss cap, maximum concurrent positions, the backtest window and the
+number of symbols replayed per backtest run. Signal
 parameters are fixed per version; one variable changes per version.
 
 ## How To Read Backtest Metrics

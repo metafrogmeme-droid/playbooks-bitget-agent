@@ -1,4 +1,4 @@
-# RUNECLAW Intraday Session Flow — rule pseudo-code (v0.1)
+# RUNECLAW Intraday Session Flow — rule pseudo-code (v0.2)
 
 All times UTC. `now` is the close time of the last completed 15-minute bar
 (replay) or the wall clock at the scheduled run (live, every 15 minutes).
@@ -22,13 +22,22 @@ LIVE RUN (main_live.run, every 15 min):
     save state, write decisions.json / orders_log.json
 
 REPLAY (main_backtest.run):
-    for symbol: fetch [now-95d, now) 15m bars in 1000-bar pages → compute_features → feature frame
+    for symbol (up to max_backtest_symbols): fetch [now-95d, now) raw 15m bars in 1000-bar pages
     inject manifest.strategy_config into the Nautilus strategy config
-    backtest.run(); strategy.py applies §2–§8 bar by bar using the injected feature rows
+    backtest.run(); strategy.py feeds each bar to features.IncrementalFeatures (same formulas
+    as §1, unit-tested equal to compute_features) and applies §2–§8 bar by bar
     write backtest_report.json, equity_curve.csv, evaluation.json (§10), emit watch signal
 ```
 
-## 1. Features (features.compute_features) — causal, per 15m bar
+## 0b. Universe
+
+```
+candidates = manifest.trading_symbols   # from the liquidity scan in UNIVERSE.md
+LIVE, every run: drop a candidate when 24h quote volume < min_24h_notional_usdt or spread > max_spread_bps
+REPLAY: drop when the rolling 96-bar notional proxy < min_24h_notional_usdt (no L1 history)
+```
+
+## 1. Features (features.compute_features / features.IncrementalFeatures) — causal, per 15m bar
 
 ```
 tp              = (high + low + close) / 3

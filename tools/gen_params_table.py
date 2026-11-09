@@ -20,7 +20,7 @@ from src.params import PlaybookParams  # noqa: E402
 
 # name -> (allowed range / options, unit, tunable by subscriber?, description)
 SPEC: dict[str, tuple[str, str, bool, str]] = {
-    "trading_symbols": ("subset of {BTCUSDT, ETHUSDT, SOLUSDT}, 1–3 items", "-", True, "Universe; exchange-native USDT-M perpetual symbols"),
+    "trading_symbols": ("subset of {BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT, SOXLUSDT, SNDKUSDT, KORUUSDT}, 1–7 items", "-", True, "Universe: contracts passing the liquidity scan; crypto on by default, RWA opt-in"),
     "margin_budget": ("100 – 100000", "USDT", True, "Risk denominator and platform return basis; margin cap = budget × leverage"),
     "leverage": ("1 – 10", "x", True, "Only changes margin usage; risk per trade is fixed by risk_pct_per_trade"),
     "risk_pct_per_trade": ("0.1 – 1.0", "% of budget", True, "Loss between entry and initial stop per trade"),
@@ -61,6 +61,7 @@ SPEC: dict[str, tuple[str, str, bool, str]] = {
     "halt_on_reconcile_mismatch": ("true / false", "-", False, "Block new entries while a position/fill mismatch is flagged"),
     "backtest_days": ("30 – 180", "days", True, "Replay window length"),
     "warmup_days": ("3 – 10", "days", False, "Extra history fetched for indicator warm-up (excluded from the replay window)"),
+    "max_backtest_symbols": ("1 – 7", "symbols", True, "Symbols replayed per sandbox run (180 s budget); the rest are reported as skipped"),
 }
 
 
@@ -103,7 +104,7 @@ def main(check_only: bool) -> int:
         return 1
 
     lines = [
-        "# Parameter table — RUNECLAW Intraday Session Flow v0.1",
+        "# Parameter table — RUNECLAW Intraday Session Flow v0.2",
         "",
         "Generated from `src/params.py` by `tools/gen_params_table.py`; defaults are",
         "identical in `manifest.yaml -> strategy_config`. *Tunable* marks the fields a",

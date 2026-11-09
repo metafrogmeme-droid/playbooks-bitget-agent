@@ -7,15 +7,15 @@ display_name_i18n:
   es: "RUNECLAW Flujo Intradía por Sesión"
   ja: "RUNECLAW セッションフロー日中戦略"
   vi: "RUNECLAW Dòng chảy phiên trong ngày"
-version: "0.1.0"
-description: "Intraday VWAP-reversion and volume-breakout day trading on BTC, ETH and SOL perpetuals, flat before midnight UTC"
+version: "0.2.0"
+description: "Intraday VWAP-reversion and volume-breakout day trading on the most liquid Bitget USDT-M perpetuals, flat before midnight UTC"
 description_i18n:
-  en: "Intraday VWAP-reversion and volume-breakout day trading on BTC, ETH and SOL perpetuals, flat before midnight UTC"
-  zh: "BTC、ETH、SOL 永续合约日内策略：VWAP 回归与放量突破，UTC 午夜前全部平仓"
-  zh-tw: "BTC、ETH、SOL 永續合約日內策略：VWAP 回歸與放量突破，UTC 午夜前全部平倉"
-  es: "Day trading intradía en perpetuos de BTC, ETH y SOL: reversión al VWAP y rupturas con volumen, sin posiciones a medianoche UTC"
-  ja: "BTC・ETH・SOL 永久先物の日中戦略：VWAP 回帰と出来高ブレイクアウト、UTC 深夜前に全決済"
-  vi: "Giao dịch trong ngày trên hợp đồng vĩnh cửu BTC, ETH, SOL: hồi quy VWAP và phá vỡ theo khối lượng, đóng hết trước nửa đêm UTC"
+  en: "Intraday VWAP-reversion and volume-breakout day trading on the most liquid Bitget USDT-M perpetuals, flat before midnight UTC"
+  zh: "Bitget 高流动性 USDT 永续合约日内策略：VWAP 回归与放量突破，UTC 午夜前全部平仓"
+  zh-tw: "Bitget 高流動性 USDT 永續合約日內策略：VWAP 回歸與放量突破，UTC 午夜前全部平倉"
+  es: "Day trading intradía en los perpetuos USDT-M más líquidos de Bitget: reversión al VWAP y rupturas con volumen, sin posiciones a medianoche UTC"
+  ja: "Bitget の高流動性 USDT-M 永久先物の日中戦略：VWAP 回帰と出来高ブレイクアウト、UTC 深夜前に全決済"
+  vi: "Giao dịch trong ngày trên các hợp đồng vĩnh cửu USDT-M thanh khoản nhất của Bitget: hồi quy VWAP và phá vỡ theo khối lượng, đóng hết trước nửa đêm UTC"
 long_description: |
   This Playbook is an intraday session-flow strategy on the most liquid Bitget
   USDT-margined perpetuals. It captures two distinct kinds of price behavior
@@ -58,8 +58,8 @@ long_description: |
   capital you can afford to lose.
 
 market_type: contract
-trading_symbols: ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
-tags: ["intraday", "vwap", "breakout", "session", "perpetual", "day-trade", "btc", "eth", "sol"]
+trading_symbols: ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT"]
+tags: ["intraday", "vwap", "breakout", "session", "perpetual", "day-trade", "btc", "eth", "sol", "xrp"]
 
 output_kind: trade_strategy
 decision_mode: deterministic
@@ -74,7 +74,7 @@ schedule:
 
 # Defaults MUST equal src/params.py (checked by tools/check_package.py).
 strategy_config:
-  trading_symbols: ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+  trading_symbols: ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT"]
   margin_budget: "1000"
   leverage: 3
   risk_pct_per_trade: 0.5
@@ -115,6 +115,7 @@ strategy_config:
   halt_on_reconcile_mismatch: true
   backtest_days: 90
   warmup_days: 5
+  max_backtest_symbols: 4
 
 # Only these fields are subscriber-editable. Signal parameters stay fixed per
 # version (one variable changes per version, see docs/VERSIONING.md).
@@ -122,8 +123,12 @@ user_config_schema:
   trading_symbols:
     type: array
     item_type: string
-    default: ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
-    options: ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+    # Universe = every Bitget USDT-M perpetual passing the liquidity scan on
+    # 2026-11-09 (24h volume >= 200M USDT, spread <= 3 bps). Crypto symbols are
+    # on by default; the RWA stock-token perps that also passed are opt-in and
+    # not covered by the official backtest (see docs/UNIVERSE.md).
+    default: ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT"]
+    options: ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "SOXLUSDT", "SNDKUSDT", "KORUUSDT"]
     aliases:
       btc: BTCUSDT
       bitcoin: BTCUSDT
@@ -131,8 +136,10 @@ user_config_schema:
       ethereum: ETHUSDT
       sol: SOLUSDT
       solana: SOLUSDT
+      xrp: XRPUSDT
+      ripple: XRPUSDT
     min_items: 1
-    max_items: 3
+    max_items: 7
     label: "Trading symbols"
   margin_budget:
     type: string
@@ -172,3 +179,9 @@ user_config_schema:
     min: 30
     max: 180
     label: "Backtest window (days)"
+  max_backtest_symbols:
+    type: integer
+    default: 4
+    min: 1
+    max: 7
+    label: "Symbols replayed per backtest run (sandbox time budget)"

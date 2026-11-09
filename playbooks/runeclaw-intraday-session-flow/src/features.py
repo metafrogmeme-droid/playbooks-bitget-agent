@@ -286,3 +286,189 @@ def latest_feature_row(df: pd.DataFrame) -> dict[str, Any]:
     out = {k: (None if (isinstance(v, float) and not np.isfinite(v)) else v) for k, v in row.to_dict().items()}
     out["bar_open_ts"] = df.index[-1].isoformat()
     return out
+
+
+# --------------------------------------------------------------------------- #
+# incremental twin of compute_features (used bar-by-bar inside the Nautilus
+# strategy so the replay never depends on injected columns).  Unit tests assert
+# it reproduces compute_features() exactly on the same bars.
+# --------------------------------------------------------------------------- #
+from collections import deque  # noqa: E402
+from datetime import datetime, timedelta, timezone  # noqa: E402
+
+
+class _Wilder:
+    """ewm(alpha=1/period, adjust=False, min_periods=period) on a stream."""
+
+    def __init__(self, period: int) -> None:
+        self.alpha = 1.0 / period
+        self.period = period
+        self.value: float | None = None
+        self.count = 0
+
+    def update(self, x: float) -> float | None:
+        if x != x:  # NaN input is skipped (pandas ignore_na=False behaviour on a leading NaN)
+            return None
+        self.value = x if self.value is None else self.alpha * x + (1.0 - self.alpha) * self.value
+        self.count += 1
+        return self.value if self.count >= self.period else None
+
+
+class _Ema:
+    """ewm(span=period, adjust=False, min_periods=period) on a stream."""
+
+    def __init__(self, period: int) -> None:
+        self.alpha = 2.0 / (period + 1.0)
+        self.period = period
+        self.value: float | None = None
+        self.count = 0
+
+    def update(self, x: float) -> float | None:
+        self.value = x if self.value is None else self.alpha * x + (1.0 - self.alpha) * self.value
+        self.count += 1
+        return self.value if self.count >= self.period else None
+
+
+class _HtfAggregator:
+    """Builds completed higher-timeframe bars from 15m bars (bins aligned to 00:00 UTC)."""
+
+    def __init__(self, minutes: int) -> None:
+        self.period = timedelta(minutes=minutes)
+        self.bucket_start: datetime | None = None
+        self.o = self.h = self.l = self.c = None
+        self.v = 0.0
+
+    def _floor(self, ts: datetime) -> datetime:
+        day = ts.replace(hour=0, minute=0, second=0, microsecond=0)
+        n = int((ts - day) // self.period)
+        return day + n * self.period
+
+    def update(self, open_ts: datetime, o: float, h: float, l: float, c: float, v: float) -> tuple | None:
+        """Feed one 15m bar; return a completed (o,h,l,c,v) HTF bar when one closes, else None."""
+        completed = None
+        bucket = self._floor(open_ts)
+        if self.bucket_start is not None and bucket != self.bucket_start:
+            completed = (self.o, self.h, self.l, self.c, self.v)
+            self.bucket_start = None
+        if self.bucket_start is None:
+            self.bucket_start, self.o, self.h, self.l, self.c, self.v = bucket, o, h, l, c, v
+        else:
+            self.h, self.l, self.c, self.v = max(self.h, h), min(self.l, l), c, self.v + v
+        if open_ts + timedelta(minutes=BAR_MINUTES) >= bucket + self.period:
+            closing = (self.o, self.h, self.l, self.c, self.v)
+            self.bucket_start = None
+            # a bar can close the previous bucket and the current one only if bars are missing;
+            # return the most recent closed bar, the earlier one is returned via `pending`.
+            if completed is not None:
+                self.pending = completed
+            return closing
+        return completed
+
+
+class IncrementalFeatures:
+    """Streaming equivalent of compute_features() for one instrument."""
+
+    def __init__(self, params: PlaybookParams) -> None:
+        self.p = params
+        self.day: datetime | None = None
+        self.cum_v = self.cum_pv = self.cum_p2v = 0.0
+        self.prev_close: float | None = None
+        self.gain = _Wilder(params.rsi_period)
+        self.loss = _Wilder(params.rsi_period)
+        self.h1 = _HtfAggregator(60)
+        self.ema = _Ema(params.bias_ema_period)
+        self.ema_prev: float | None = None
+        self.ema_now: float | None = None
+        self.h4 = _HtfAggregator(240)
+        self.atr = _Wilder(params.regime_atr_period)
+        self.atr_pct: float | None = None
+        self.h4_prev_close: float | None = None
+        self.vols: deque = deque(maxlen=params.volume_median_bars)
+        self.highs: deque = deque(maxlen=params.breakout_lookback_bars)
+        self.lows: deque = deque(maxlen=params.breakout_lookback_bars)
+        self.notional: deque = deque(maxlen=BARS_PER_DAY)
+        self.notional_sum = 0.0
+
+    def _on_h1(self, bar: tuple) -> None:
+        value = self.ema.update(bar[3])
+        self.ema_prev, self.ema_now = self.ema_now, value
+
+    def _on_h4(self, bar: tuple) -> None:
+        o, h, l, c, _ = bar
+        if self.h4_prev_close is None:
+            tr = h - l
+        else:
+            tr = max(h - l, abs(h - self.h4_prev_close), abs(l - self.h4_prev_close))
+        self.h4_prev_close = c
+        atr = self.atr.update(tr)
+        self.atr_pct = (atr / c * 100.0) if atr is not None and c else None
+
+    def update(self, open_ts: datetime, o: float, h: float, l: float, c: float, v: float) -> dict[str, Any]:
+        if open_ts.tzinfo is None:
+            open_ts = open_ts.replace(tzinfo=timezone.utc)
+        nan = float("nan")
+        # previous-bar windows first (current bar excluded)
+        vol_median_prev = float(np.median(list(self.vols))) if len(self.vols) == self.vols.maxlen else nan
+        prior_high = max(self.highs) if len(self.highs) == self.highs.maxlen else nan
+        prior_low = min(self.lows) if len(self.lows) == self.lows.maxlen else nan
+
+        # session VWAP / sigma
+        day = open_ts.replace(hour=0, minute=0, second=0, microsecond=0)
+        if day != self.day:
+            self.day, self.cum_v, self.cum_pv, self.cum_p2v = day, 0.0, 0.0, 0.0
+        tp = (h + l + c) / 3.0
+        self.cum_v += v
+        self.cum_pv += tp * v
+        self.cum_p2v += tp * tp * v
+        if self.cum_v > 0:
+            vwap = self.cum_pv / self.cum_v
+            sigma = float(np.sqrt(max(self.cum_p2v / self.cum_v - vwap * vwap, 0.0)))
+        else:
+            vwap, sigma = nan, nan
+
+        # RSI
+        rsi = nan
+        if self.prev_close is not None:
+            delta = c - self.prev_close
+            g = self.gain.update(max(delta, 0.0))
+            lo = self.loss.update(max(-delta, 0.0))
+            if g is not None and lo is not None:
+                rsi = 100.0 if lo == 0.0 else 100.0 - 100.0 / (1.0 + g / lo)
+        self.prev_close = c
+
+        # higher timeframes (completed bars only)
+        done = self.h1.update(open_ts, o, h, l, c, v)
+        if done is not None:
+            pend = getattr(self.h1, "pending", None)
+            if pend is not None:
+                self._on_h1(pend)
+                self.h1.pending = None
+            self._on_h1(done)
+        slope = nan
+        if self.ema_now is not None and self.ema_prev is not None and self.ema_prev != 0:
+            slope = (self.ema_now - self.ema_prev) / self.ema_prev * 100.0
+        done4 = self.h4.update(open_ts, o, h, l, c, v)
+        if done4 is not None:
+            pend = getattr(self.h4, "pending", None)
+            if pend is not None:
+                self._on_h4(pend)
+                self.h4.pending = None
+            self._on_h4(done4)
+        atr_pct = self.atr_pct if self.atr_pct is not None else nan
+
+        # rolling 24h notional (current bar included)
+        self.notional.append(c * v)
+        self.notional_sum = float(sum(self.notional))
+        notional_24h = self.notional_sum if len(self.notional) == self.notional.maxlen else nan
+
+        row = {
+            "open": o, "high": h, "low": l, "close": c, "volume": v,
+            "vwap_session": vwap, "vwap_sigma": sigma, "rsi": rsi, "bias_slope_pct": slope,
+            "atr4h_pct": atr_pct, "vol_median_prev": vol_median_prev, "prior_high": prior_high,
+            "prior_low": prior_low, "notional_24h": notional_24h,
+        }
+        # push current bar into the "previous" windows for the next bar
+        self.vols.append(v)
+        self.highs.append(h)
+        self.lows.append(l)
+        return row

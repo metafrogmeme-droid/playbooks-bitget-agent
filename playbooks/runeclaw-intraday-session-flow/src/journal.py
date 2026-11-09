@@ -1,8 +1,8 @@
 """Order journal, persisted state and position/fill reconciliation (live path).
 
-Persistence contract (see sandbox-runtime.md): only ``/workspace/.state/`` may
-survive between runs, and the runner hydrates/syncs it.  Everything else is
-rewritten each run.  Per-run artifacts go to ``/workspace/output/`` where the
+Persistence contract (see sandbox-runtime.md): only ``.state/`` may survive
+between runs, and the runner hydrates/syncs it.  Everything else is rewritten
+each run.  Per-run artifacts go to ``output/`` (package-relative) where the
 Runner collects ``*.json`` / ``*.csv``.
 
 Journal row schema (one row per order event):
@@ -24,9 +24,10 @@ from .params import PLAYBOOK_VERSION, PlaybookParams
 from .risk import DailyLedger, to_utc
 
 UTC = timezone.utc
-WORKSPACE = Path("/workspace")
-STATE_DIR = WORKSPACE / ".state" / "runeclaw"
-OUTPUT_DIR = WORKSPACE / "output"
+# Paths are relative to the package working directory (the runner executes
+# `python -m src.main` from the package root and collects `<package>/output/*`).
+STATE_DIR = Path(".state") / "runeclaw"
+OUTPUT_DIR = Path("output")
 STATE_FILE = STATE_DIR / "state.json"
 ORDERS_FILE = STATE_DIR / "orders.jsonl"
 

@@ -1,6 +1,6 @@
 # Versioning & evaluation policy
 
-**Current version: v0.1.0** (`src/params.py::PLAYBOOK_VERSION`, `manifest.yaml::version`).
+**Current version: v0.2.0** (`src/params.py::PLAYBOOK_VERSION`, `manifest.yaml::version`).
 
 ## Rules
 
@@ -35,10 +35,11 @@
 
 | Version | Single change under test | Why |
 |---|---|---|
-| v0.2 | Direction-aware funding rule in replay (inject historical funding as a feature) | Remove the biggest live/replay drift |
-| v0.3 | `vwap_trigger_sigma` 1.5 → 2.0 | Fewer, cleaner reversion entries |
-| v0.4 | `signal_b_target_r` 2.0 → 1.5 | Higher hit rate on breakouts |
-| v0.5 | Add 1H ADX or range-width gate for Signal A only | Avoid fading real trends |
+| v0.2 | Universe → all liquid crypto USDT-M perps from the scan (adds XRPUSDT) | More independent round-trips |
+| v0.3 | Direction-aware funding rule in replay (inject historical funding as a feature) | Remove the biggest live/replay drift; v0.1 showed 28 funding exits |
+| v0.4 | `vwap_trigger_sigma` 1.5 → 2.0 | Fewer, cleaner reversion entries (v0.1: stops 55 vs targets 38) |
+| v0.5 | `signal_b_target_r` 2.0 → 1.5 | Higher hit rate on breakouts |
+| v0.6 | Add 1H ADX or range-width gate for Signal A only | Avoid fading real trends |
 
 ## Changelog entry template
 

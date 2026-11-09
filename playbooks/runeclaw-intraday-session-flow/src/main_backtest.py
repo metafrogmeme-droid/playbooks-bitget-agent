@@ -1,7 +1,9 @@
 """Historical replay driver (never imports getagent.trade).
 
 1. fetch closed 15m Bitget bars per symbol in <=1000-bar pages
-2. build the feature frame with the SAME ``features.compute_features`` the live path uses
+2. hand raw OHLCV to the replay engine; ``strategy.py`` computes the same
+   features incrementally (``features.IncrementalFeatures``) so the platform's
+   own evidence replay with raw bars produces identical decisions
 3. inject manifest.strategy_config into the Nautilus strategy config
 4. run the managed replay, write the output contract files, evaluate the
    pre-registered pass criteria and emit one ``watch`` summary signal
@@ -19,11 +21,10 @@ import pandas as pd
 
 from getagent import backtest, data, runtime
 
-from . import features
 from .params import PLAYBOOK_VERSION, PlaybookParams
 
 UTC = timezone.utc
-OUTPUT_DIR = Path("/workspace/output")
+OUTPUT_DIR = Path("output")  # package-relative; the Runner collects <package>/output/*
 PAGE_BARS = 1000
 BAR = timedelta(minutes=15)
 
@@ -174,10 +175,13 @@ def run() -> None:
         if frame.empty or (meta.get("coverage") or 0) < 0.7:
             skipped[symbol] = f"insufficient bars (coverage={meta.get('coverage')})"
             continue
-        feat = features.compute_features(frame, params)
         key = f"{symbol}.{venue}"
-        ohlcv[key] = feat
+        ohlcv[key] = frame[["open", "high", "low", "close", "volume"]]
         loaded.append(symbol)
+        if len(loaded) >= params.max_backtest_symbols:
+            for rest in params.trading_symbols[params.trading_symbols.index(symbol) + 1:]:
+                skipped[rest] = f"beyond max_backtest_symbols={params.max_backtest_symbols}"
+            break
 
     primary = params.trading_symbols[0] if params.trading_symbols else "BTCUSDT"
     if not ohlcv:
