@@ -1,6 +1,6 @@
-# Nautilus replay spec. Instrument tick/lot values must be re-checked against
-# https://api.bitget.com/api/v2/mix/market/contracts?productType=USDT-FUTURES
-# before the first official run (see docs/PREFLIGHT.md).
+# Nautilus replay spec. Instrument tick/lot/fee values verified against
+# https://api.bitget.com/api/v2/mix/market/contracts?productType=USDT-FUTURES on 2026-11-09
+# (BTC pricePlace 1 / volumePlace 4, ETH 2 / 2, SOL 3 / 1, maker 0.02% taker 0.06%).
 venue:
   name: BITGET
   account_type: MARGIN
@@ -34,10 +34,10 @@ instruments:
     quote_currency: USDT
     settlement_currency: USDT
     price_precision: 1
-    size_precision: 3
+    size_precision: 4
     price_increment: "0.1"
-    size_increment: "0.001"
-    lot_size: "0.001"
+    size_increment: "0.0001"
+    lot_size: "0.0001"
     maker_fee: "0.0002"
     taker_fee: "0.0006"
     bar_type: BTCUSDT.BITGET-15-MINUTE-LAST-EXTERNAL

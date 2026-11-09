@@ -12,12 +12,10 @@ for s in BTCUSDT ETHUSDT SOLUSDT; do
 done
 ```
 
-Expect `symbolStatus == "normal"`. Update `backtest.yaml` if `pricePlace`,
-`priceEndStep`, `volumePlace`, `minTradeNum` or the fee rates differ from the
-values written there (BTC 0.1 / 0.001, ETH 0.01 / 0.01, SOL 0.001 / 0.1,
-maker 0.02 % / taker 0.06 %). This lookup could not be executed from the
-authoring environment (outbound access to api.bitget.com was blocked), so the
-values in `backtest.yaml` are the commonly published ones and must be verified.
+Expect `symbolStatus == "normal"`. Verified 2026-11-09: BTC pricePlace 1 /
+volumePlace 4 (lot 0.0001), ETH 2 / 2 (lot 0.01), SOL 3 / 1 (lot 0.1), maker
+0.02 % / taker 0.06 %, 8-hour funding. `backtest.yaml` matches these values;
+re-run this step and update it if Bitget changes a contract.
 
 ## 2. Probe replay data coverage (sandbox run does this automatically)
 
