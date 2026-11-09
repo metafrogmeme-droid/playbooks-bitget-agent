@@ -11,15 +11,18 @@ platform's own evidence replay supplies.
 Replay-specific simplifications (documented in docs/PSEUDOCODE.md):
 * spread gate is live-only (no L1 history); the 24h volume gate uses the
   rolling 15m notional proxy ``notional_24h``
-* funding rule is direction-agnostic in replay (flatten before every funding
-  time) because historical funding is not injected in v0.1
+* funding rule is direction-aware when ``funding_history`` is injected (v0.3+):
+  a position is flattened before settlement only when it would PAY funding
+  (long with positive rate, short with negative rate).  Without funding data
+  for a symbol the rule falls back to flattening before every settlement and
+  the exit is counted separately as ``funding_window_rate_unknown``.
 * limit entries are GTD orders; stop = reduce-only stop-market, target =
   reduce-only limit; time-stop / funding / EOD exits use close_position
 """
 from __future__ import annotations
 
 import json
-from datetime import timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Optional
 
@@ -45,6 +48,8 @@ class RuneclawSessionFlowConfig(StrategyConfig):
     instrument_ids: tuple[str, ...] = ()
     bar_types: tuple[str, ...] = ()
     strategy_params: Optional[dict] = None   # copy of manifest.strategy_config (injected by main_backtest)
+    funding_history: Optional[dict] = None   # {symbol: [[settlement_ts_ms, rate], ...]} (injected by main_backtest)
+    trade_start: str = ""                    # ISO time; bars before it only warm up indicators (no entries)
 
 
 class RuneclawSessionFlow(Strategy):
@@ -61,9 +66,14 @@ class RuneclawSessionFlow(Strategy):
         self.journal: list[dict[str, Any]] = []
         self._closing_reason: dict[str, str] = {}
         self._last_fill_px: dict[str, float] = {}
+        self._funding = {str(k).upper(): v for k, v in (config.funding_history or {}).items()}
+        self._trade_start = None
+        if config.trade_start:
+            self._trade_start = risk.to_utc(datetime.fromisoformat(config.trade_start))
         self.stats: dict[str, Any] = {
             "round_trips": 0, "wins": 0, "losses": 0, "gross_profit": 0.0, "gross_loss": 0.0,
             "exit_reasons": {}, "entries_placed": 0, "entries_expired": 0, "gate_blocks": {},
+            "funding_kept_positions": 0, "funding_symbols_with_data": sorted(self._funding.keys()),
         }
 
     # ------------------------------------------------------------------ wiring
@@ -125,6 +135,9 @@ class RuneclawSessionFlow(Strategy):
 
     def _maybe_enter(self, symbol: str, iid: InstrumentId, bar: Bar, row: dict[str, Any], now) -> None:
         params = self.params
+        if self._trade_start is not None and now < self._trade_start:
+            self._block("warmup")
+            return
         ok, why = features.regime_ok(row, params)
         if not ok:
             self._block(why)
@@ -191,8 +204,17 @@ class RuneclawSessionFlow(Strategy):
         elif self.ledger.halted and params.daily_cap_flatten:
             reason = "daily_loss_cap"
         elif risk.funding_flatten_due(now, params):
-            reason = "funding_window"        # direction-agnostic in replay (no funding history in v0.1)
-        elif risk.time_stop_due(risk.to_utc(trade["opened_at"]), now, params):
+            rate = risk.funding_rate_at(self._funding.get(symbol), now)
+            pays = risk.position_pays_funding(trade["side"], rate)
+            if pays is None:
+                reason = "funding_window_rate_unknown"   # no funding data: conservative flatten
+            elif pays or not params.funding_direction_aware:
+                reason = "funding_window"
+            else:
+                if not trade.get("_funding_kept_logged"):
+                    self.stats["funding_kept_positions"] += 1
+                    trade["_funding_kept_logged"] = True
+        if not reason and risk.time_stop_due(risk.to_utc(trade["opened_at"]), now, params):
             reason = "time_stop"
         if reason:
             self._flatten(symbol, iid, reason, now)

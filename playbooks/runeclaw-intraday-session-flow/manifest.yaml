@@ -7,7 +7,7 @@ display_name_i18n:
   es: "RUNECLAW Flujo Intradía por Sesión"
   ja: "RUNECLAW セッションフロー日中戦略"
   vi: "RUNECLAW Dòng chảy phiên trong ngày"
-version: "0.2.0"
+version: "0.3.0"
 description: "Intraday VWAP-reversion and volume-breakout day trading on the most liquid Bitget USDT-M perpetuals, flat before midnight UTC"
 description_i18n:
   en: "Intraday VWAP-reversion and volume-breakout day trading on the most liquid Bitget USDT-M perpetuals, flat before midnight UTC"

@@ -1,4 +1,4 @@
-# RUNECLAW Intraday Session Flow — rule pseudo-code (v0.2)
+# RUNECLAW Intraday Session Flow — rule pseudo-code (v0.3)
 
 All times UTC. `now` is the close time of the last completed 15-minute bar
 (replay) or the wall clock at the scheduled run (live, every 15 minutes).
@@ -23,7 +23,9 @@ LIVE RUN (main_live.run, every 15 min):
 
 REPLAY (main_backtest.run):
     for symbol (up to max_backtest_symbols): fetch [now-95d, now) raw 15m bars in 1000-bar pages
-    inject manifest.strategy_config into the Nautilus strategy config
+    fetch historical funding rates per symbol (direction-aware funding rule)
+    inject manifest.strategy_config, funding_history and trade_start into the Nautilus strategy config
+    feed ALL fetched bars (warm-up included); entries are blocked before trade_start
     backtest.run(); strategy.py feeds each bar to features.IncrementalFeatures (same formulas
     as §1, unit-tested equal to compute_features) and applies §2–§8 bar by bar
     write backtest_report.json, equity_curve.csv, evaluation.json (§10), emit watch signal
@@ -138,7 +140,8 @@ for each open trade (checked in this order):
     minutes_to_next_funding ≤ max(funding_lead, 15):
         LIVE:   pays = (side==long and rate>0) or (side==short and rate<0)
                 if pays or rate unknown                          → FLATTEN "funding_window[_rate_unknown]"
-        REPLAY: always                                           → FLATTEN "funding_window"  (no funding history in v0.1)
+        REPLAY: rate = latest historical funding row ≤ now for the symbol (injected by main_backtest)
+                same test as LIVE; no row → FLATTEN "funding_window_rate_unknown" (reported as degraded)
     open for ≥ time_stop_minutes (120)                           → FLATTEN "time_stop"
     otherwise:
         kind A: target ← current vwap_session (modify TP plan order)

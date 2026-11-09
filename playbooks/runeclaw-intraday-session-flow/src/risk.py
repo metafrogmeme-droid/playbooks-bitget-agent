@@ -88,6 +88,24 @@ def position_pays_funding(side: str, funding_rate: float | None) -> bool | None:
     return None
 
 
+def funding_rate_at(history: Iterable | None, now: datetime) -> float | None:
+    """Latest known funding rate at ``now`` from ``[[ts_ms, rate], ...]`` rows
+    (sorted or not).  Returns None when there is no row at or before ``now``,
+    so callers fall back to the conservative rule instead of a constant."""
+    if not history:
+        return None
+    now_ms = int(now.astimezone(UTC).timestamp() * 1000)
+    best_ts, best_rate = None, None
+    for row in history:
+        try:
+            ts, rate = int(row[0]), float(row[1])
+        except (TypeError, ValueError, IndexError):
+            continue
+        if ts <= now_ms and (best_ts is None or ts > best_ts) and math.isfinite(rate):
+            best_ts, best_rate = ts, rate
+    return best_rate
+
+
 def eod_flatten_due(now: datetime, params: PlaybookParams) -> bool:
     t = now.astimezone(UTC).time().replace(tzinfo=UTC)
     return t >= parse_hhmm(params.eod_flatten_time)

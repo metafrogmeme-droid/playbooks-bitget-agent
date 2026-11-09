@@ -201,3 +201,14 @@ class RiskTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FundingLookupTests(unittest.TestCase):
+    def test_latest_rate_at_or_before_now(self) -> None:
+        hist = [[1_000_000, 0.0001], [3_000_000, -0.0002], [2_000_000, 0.00005]]
+        now = datetime.fromtimestamp(2_500, tz=UTC)
+        self.assertAlmostEqual(risk.funding_rate_at(hist, now), 0.00005)
+        self.assertAlmostEqual(risk.funding_rate_at(hist, datetime.fromtimestamp(3_000, tz=UTC)), -0.0002)
+        self.assertIsNone(risk.funding_rate_at(hist, datetime.fromtimestamp(500, tz=UTC)))
+        self.assertIsNone(risk.funding_rate_at(None, now))
+        self.assertIsNone(risk.funding_rate_at([["x", "y"]], now))

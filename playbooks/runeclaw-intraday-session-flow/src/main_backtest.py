@@ -5,7 +5,9 @@
    features incrementally (``features.IncrementalFeatures``) so the platform's
    own evidence replay with raw bars produces identical decisions
 3. inject manifest.strategy_config into the Nautilus strategy config
-4. run the managed replay, write the output contract files, evaluate the
+4. fetch historical funding rates per symbol (direction-aware funding rule;
+   missing data is reported as degraded, never replaced by a constant)
+5. run the managed replay, write the output contract files, evaluate the
    pre-registered pass criteria and emit one ``watch`` summary signal
 """
 from __future__ import annotations
@@ -73,6 +75,44 @@ def fetch_15m(symbol: str, start: datetime, end: datetime) -> tuple[pd.DataFrame
         "last": out.index.max().isoformat() if len(out) else None,
     }
     return out, meta
+
+
+def fetch_funding(symbol: str, start: datetime, end: datetime) -> tuple[list[list[float]], str]:
+    """Historical funding rates as [[ts_ms, rate], ...] for the replay window.
+
+    Tries the exchange-native pair first, then the base asset (the managed
+    funding endpoint is documented to accept base-asset symbols for some
+    providers).  Returns an empty list when nothing usable comes back; the
+    strategy then falls back to flattening before every settlement and reports
+    the degradation instead of inventing a rate."""
+    window_start = max(start, end - timedelta(days=89))
+    for sym in (symbol, symbol.replace("USDT", "")):
+        try:
+            payload = data.crypto.futures.funding_rate(
+                symbol=sym, exchange="bitget", interval="1h", limit=1000,
+                start_time=_ms(window_start), end_time=_ms(end),
+            )
+            rows = data.to_records(payload)
+        except Exception as exc:  # noqa: BLE001 - try the next symbol spelling
+            rows = []
+            last_error = str(exc)
+        out: list[list[float]] = []
+        for r in rows or []:
+            if not isinstance(r, dict):
+                continue
+            rate = r.get("funding_rate")
+            ts = r.get("timestamp") or r.get("date") or r.get("time")
+            if rate is None or ts is None:
+                continue
+            try:
+                ts_ms = int(pd.Timestamp(ts).tz_localize("UTC").timestamp() * 1000) if pd.Timestamp(ts).tzinfo is None else int(pd.Timestamp(ts).timestamp() * 1000)
+                out.append([ts_ms, float(rate)])
+            except (TypeError, ValueError):
+                continue
+        if out:
+            out.sort(key=lambda x: x[0])
+            return out, f"ok:{sym}:{len(out)}"
+    return [], "unavailable"
 
 
 def _equity_curve_points(raw: dict[str, Any], starting_balance: float) -> tuple[list[dict[str, Any]], str]:
@@ -183,6 +223,15 @@ def run() -> None:
                 skipped[rest] = f"beyond max_backtest_symbols={params.max_backtest_symbols}"
             break
 
+    funding_history: dict[str, list[list[float]]] = {}
+    funding_meta: dict[str, str] = {}
+    if params.funding_direction_aware:
+        for symbol in loaded:
+            rows, status = fetch_funding(symbol, replay_start - timedelta(days=1), end)
+            funding_meta[symbol] = status
+            if rows:
+                funding_history[symbol] = rows
+
     primary = params.trading_symbols[0] if params.trading_symbols else "BTCUSDT"
     if not ohlcv:
         runtime.emit_signal(action="watch", symbol=primary, confidence=0.0, metrics={"rows": 0},
@@ -196,8 +245,12 @@ def run() -> None:
     strategy_cfg["strategy_params"] = params.as_dict()
     strategy_cfg["instrument_ids"] = list(ohlcv.keys())
     strategy_cfg["bar_types"] = [f"{k}-15-MINUTE-LAST-EXTERNAL" for k in ohlcv.keys()]
+    strategy_cfg["funding_history"] = funding_history
+    strategy_cfg["trade_start"] = replay_start.isoformat()
     spec.setdefault("strategy", {})["config"] = strategy_cfg
-    spec["execution"] = {"start": replay_start.isoformat(), "end": end.isoformat()}
+    # Feed the warm-up bars too (indicators need ~3 days of 4H bars); the strategy
+    # blocks entries before trade_start, so the evaluated window is unchanged.
+    spec["execution"] = {"start": start.isoformat(), "end": end.isoformat()}
 
     result = backtest.run(ohlcv_data=ohlcv, spec=spec)
     chart_path = backtest.generate_chart(result)
@@ -246,7 +299,9 @@ def run() -> None:
                           float(profit_factor) if profit_factor is not None else None, dd_pct_of_budget)
     evaluation.update({"window": {"start": replay_start.isoformat(), "end": end.isoformat()},
                        "symbols_loaded": loaded, "symbols_skipped": skipped, "equity_curve_source": curve_source,
-                       "exit_reasons": replay_stats.get("exit_reasons"), "gate_blocks": replay_stats.get("gate_blocks")})
+                       "exit_reasons": replay_stats.get("exit_reasons"), "gate_blocks": replay_stats.get("gate_blocks"),
+                       "funding_data": funding_meta, "funding_kept_positions": replay_stats.get("funding_kept_positions"),
+                       "funding_feature_degraded": sorted(s for s in loaded if s not in funding_history)})
     (OUTPUT_DIR / "evaluation.json").write_text(json.dumps(evaluation, indent=2, default=str), encoding="utf-8")
 
     metrics = {k: _sanitize(v) for k, v in {
@@ -275,5 +330,6 @@ def run() -> None:
         confidence=_sanitize(result.win_rate) or 0.0,
         metrics=metrics,
         meta={"chart_path": chart_path, "evaluation": evaluation, "data": data_meta, "playbook_version": PLAYBOOK_VERSION,
-              "funding_rule_mode": "replay_direction_agnostic", "spread_gate": "live_only"},
+              "funding_rule_mode": "direction_aware" if funding_history else "direction_agnostic_fallback",
+              "funding_data": funding_meta, "spread_gate": "live_only"},
     )

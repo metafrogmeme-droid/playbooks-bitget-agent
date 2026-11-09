@@ -15,7 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, fields
 from typing import Any
 
-PLAYBOOK_VERSION = "0.2.0"
+PLAYBOOK_VERSION = "0.3.0"
 DECISION_INTERVAL_MINUTES = 15  # 15m execution bars and 15m live cadence
 
 

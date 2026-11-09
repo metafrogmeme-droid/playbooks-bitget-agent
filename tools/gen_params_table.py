@@ -104,7 +104,7 @@ def main(check_only: bool) -> int:
         return 1
 
     lines = [
-        "# Parameter table — RUNECLAW Intraday Session Flow v0.2",
+        "# Parameter table — RUNECLAW Intraday Session Flow v0.3",
         "",
         "Generated from `src/params.py` by `tools/gen_params_table.py`; defaults are",
         "identical in `manifest.yaml -> strategy_config`. *Tunable* marks the fields a",

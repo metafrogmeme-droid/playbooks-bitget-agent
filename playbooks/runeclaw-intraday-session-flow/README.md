@@ -1,4 +1,4 @@
-# RUNECLAW Intraday Session Flow (v0.2)
+# RUNECLAW Intraday Session Flow (v0.3)
 
 Day-trading Playbook for the most liquid Bitget USDT-M perpetuals. The universe
 is every contract that passed the liquidity scan (24h volume ≥ 200M USDT,
@@ -77,7 +77,8 @@ round-trips is PENDING, never PASS. Trade-level detail is in
 Counter-trend entries lose in sessions that keep trending; breakout entries lose
 in fake-outs around macro releases that fall inside the US window. Resting limit
 orders can miss fills in thin liquidity, leaving the strategy flat while the
-move happens. The spread gate and the direction-aware funding rule are
-live-only (no historical L1 or funding data in v0.1), so live behaviour will
-differ slightly from replay. Past performance is not a guarantee of future
+move happens. The spread gate is live-only (no historical L1 data), and the
+direction-aware funding rule in replay depends on historical funding-rate
+coverage; where it is missing the replay flattens before every settlement and
+reports that degradation, so live behaviour can differ slightly from replay. Past performance is not a guarantee of future
 results; do not run this with leverage or budget you cannot afford to lose.

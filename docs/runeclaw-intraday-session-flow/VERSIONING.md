@@ -1,6 +1,6 @@
 # Versioning & evaluation policy
 
-**Current version: v0.2.0** (`src/params.py::PLAYBOOK_VERSION`, `manifest.yaml::version`).
+**Current version: v0.3.0** (`src/params.py::PLAYBOOK_VERSION`, `manifest.yaml::version`).
 
 ## Rules
 
@@ -23,10 +23,11 @@
 3. **No live run before PASS.** `follow_trade` subscriptions are opened only
    for a version whose `evaluation.json` says PASS on a window that ends no
    more than 7 days before the go-live date.
-4. **Live-only rules are declared.** v0.1 knows two: the spread gate (needs an
-   L1 quote) and direction-aware funding flattening (needs the live funding
-   rate). Replay flattens before every funding time instead. Both are listed
-   in the manifest meta and README so live/replay drift is expected, not hidden.
+4. **Live-only rules are declared.** The spread gate needs an L1 quote and is
+   live-only. Since v0.3 the funding rule is direction-aware in replay too,
+   using historical funding rates; a symbol without funding coverage falls
+   back to flattening before every settlement and is listed as degraded in
+   `evaluation.json`. Drift is reported, never hidden.
 5. **Journals are evidence.** Every order event is logged with `signal_id`,
    timestamp, limit/fill price, stop, target and exit reason. Live PnL in the
    ledger is tagged as estimate when derived from mark price rather than fills.
@@ -36,7 +37,7 @@
 | Version | Single change under test | Why |
 |---|---|---|
 | v0.2 | Universe → all liquid crypto USDT-M perps from the scan (adds XRPUSDT) | More independent round-trips |
-| v0.3 | Direction-aware funding rule in replay (inject historical funding as a feature) | Remove the biggest live/replay drift; v0.1 showed 28 funding exits |
+| v0.3 | Direction-aware funding rule in replay (historical funding rates injected) | v0.2 had 29 funding exits of 148 round-trips |
 | v0.4 | `vwap_trigger_sigma` 1.5 → 2.0 | Fewer, cleaner reversion entries (v0.1: stops 55 vs targets 38) |
 | v0.5 | `signal_b_target_r` 2.0 → 1.5 | Higher hit rate on breakouts |
 | v0.6 | Add 1H ADX or range-width gate for Signal A only | Avoid fading real trends |
