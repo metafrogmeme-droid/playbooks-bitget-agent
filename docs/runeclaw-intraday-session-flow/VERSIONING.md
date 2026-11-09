@@ -1,6 +1,6 @@
 # Versioning & evaluation policy
 
-**Current version: v0.3.0** (`src/params.py::PLAYBOOK_VERSION`, `manifest.yaml::version`).
+**Current version: v0.3.1** (`src/params.py::PLAYBOOK_VERSION`, `manifest.yaml::version`).
 
 ## Rules
 

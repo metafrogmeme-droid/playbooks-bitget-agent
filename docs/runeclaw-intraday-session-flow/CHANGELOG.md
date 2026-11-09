@@ -10,10 +10,27 @@ Hypothesis:  v0.2 had 29 funding-window exits (20 % of round-trips) cut before t
              stop; keeping the positions that receive funding should lift PF without
              changing entries, stops or targets.
 Baseline:    v0.2.0 run pbrun-9ec1a7d1d9e0 (RTs=148 PF=0.78 DD=14.0 %).
-Window:      to be run — last 90 days (+5 warm-up), BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT
+Window:      2026-08-11 17:15 → 2026-11-09 17:15 UTC, BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT
+             (run pbrun-57c1bdab4a5e, platform status completed, 556 orders / 150 positions)
+Result:      RTs=150 PF=0.84 (engine fill-based PF 1.27) DD=11.4 % of budget, win rate 49 %,
+             net −68.4 USDT on 1,000 USDT → FAIL on PF and DD.
+             Exits: stop 59, target 38, time stop 30, funding (pays) 11, funding (rate
+             unknown) 11, daily cap 1; 9 positions kept through a settlement they would
+             have received funding on.
+             Data defect: hourly funding rows hit the 1000-row cap, covering only the last
+             ~42 days → the 11 "rate unknown" exits. Fixed in v0.3.1 (4h aggregation).
+Decision:    FAIL. Complete the funding fix (v0.3.1) and re-run before any other change.
+
+## v0.3.1 — 2026-11-09
+Change:      None to strategy rules. Funding history fetched at 4h aggregation so the
+             whole 90-day window is covered in one page (was truncated to ~42 days).
+Hypothesis:  Removes the 11 "funding_window_rate_unknown" exits; everything else equal.
+Baseline:    v0.3.0 run pbrun-57c1bdab4a5e.
+Window:      to be run — same window and symbols as v0.3.0
 Result:      not yet run → verdict PENDING
 Decision:    run sandbox evaluation; no live run before PASS
-Pipeline correction shipped with this version: warm-up bars are now fed to the
+
+Pipeline correction shipped with v0.3.0: warm-up bars are now fed to the
 strategy (entries blocked until the replay window starts) so the 4H regime
 filter is available from the first evaluated bar; v0.2 lost ~2.3 days of
 entries per symbol to "regime unavailable".

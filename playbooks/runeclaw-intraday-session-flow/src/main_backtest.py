@@ -88,8 +88,10 @@ def fetch_funding(symbol: str, start: datetime, end: datetime) -> tuple[list[lis
     window_start = max(start, end - timedelta(days=89))
     for sym in (symbol, symbol.replace("USDT", "")):
         try:
+            # 4h aggregation: 90 days = 540 rows, inside the 1000-row cap, so the whole
+            # replay window is covered in one page (1h rows were truncated to ~42 days).
             payload = data.crypto.futures.funding_rate(
-                symbol=sym, exchange="bitget", interval="1h", limit=1000,
+                symbol=sym, exchange="bitget", interval="4h", limit=1000,
                 start_time=_ms(window_start), end_time=_ms(end),
             )
             rows = data.to_records(payload)
@@ -111,7 +113,8 @@ def fetch_funding(symbol: str, start: datetime, end: datetime) -> tuple[list[lis
                 continue
         if out:
             out.sort(key=lambda x: x[0])
-            return out, f"ok:{sym}:{len(out)}"
+            first = pd.Timestamp(out[0][0], unit="ms", tz="UTC").isoformat()
+            return out, f"ok:{sym}:{len(out)}:from:{first}"
     return [], "unavailable"
 
 
