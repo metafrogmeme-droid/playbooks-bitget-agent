@@ -1,0 +1,174 @@
+name: runeclaw-intraday-session-flow
+display_name: "RUNECLAW Intraday Session Flow"
+display_name_i18n:
+  en: "RUNECLAW Intraday Session Flow"
+  zh: "RUNECLAW 日内时段流动策略"
+  zh-tw: "RUNECLAW 日內時段流動策略"
+  es: "RUNECLAW Flujo Intradía por Sesión"
+  ja: "RUNECLAW セッションフロー日中戦略"
+  vi: "RUNECLAW Dòng chảy phiên trong ngày"
+version: "0.1.0"
+description: "Intraday VWAP-reversion and volume-breakout day trading on BTC, ETH and SOL perpetuals, flat before midnight UTC"
+description_i18n:
+  en: "Intraday VWAP-reversion and volume-breakout day trading on BTC, ETH and SOL perpetuals, flat before midnight UTC"
+  zh: "BTC、ETH、SOL 永续合约日内策略：VWAP 回归与放量突破，UTC 午夜前全部平仓"
+  zh-tw: "BTC、ETH、SOL 永續合約日內策略：VWAP 回歸與放量突破，UTC 午夜前全部平倉"
+  es: "Day trading intradía en perpetuos de BTC, ETH y SOL: reversión al VWAP y rupturas con volumen, sin posiciones a medianoche UTC"
+  ja: "BTC・ETH・SOL 永久先物の日中戦略：VWAP 回帰と出来高ブレイクアウト、UTC 深夜前に全決済"
+  vi: "Giao dịch trong ngày trên hợp đồng vĩnh cửu BTC, ETH, SOL: hồi quy VWAP và phá vỡ theo khối lượng, đóng hết trước nửa đêm UTC"
+long_description: |
+  This Playbook is an intraday session-flow strategy on the most liquid Bitget
+  USDT-margined perpetuals. It captures two distinct kinds of price behavior
+  that appear during the European and United States cash-market opening hours:
+  stretched moves away from the session's volume-weighted average price that
+  tend to snap back, and genuine volume-backed breakouts that tend to continue.
+  The thesis is that liquidity and participation cluster into these windows, so
+  both over-extension and real initiative are easier to recognise there than
+  during quiet hours. Every position is closed before the UTC day ends, so no
+  exposure is carried overnight.
+
+  Before any entry the strategy checks a higher-timeframe volatility regime.
+  Markets that are too quiet are treated as chop and skipped; markets that are
+  too violent are treated as event risk and skipped as well. Inside an accepted
+  regime it enters a counter-trend position when price is stretched far from
+  the session average, momentum is exhausted, and the hourly bias does not
+  fight the trade. It enters a trend position when a bar prints a volume spike,
+  closes beyond the recent range, and the hourly bias agrees. Entries are
+  resting limit orders that expire if not filled in time.
+
+  Exits are rule-based and reduce-only. The counter-trend trade targets a return
+  to the session average with a protective stop beyond the stretch; the breakout
+  trade targets a fixed multiple of its initial risk and trails its stop once
+  the trade is in profit. A time stop closes anything that stalls, positions are
+  flattened shortly before funding settlement when the position would pay
+  funding, and everything is flat before midnight. A daily loss cap halts new
+  trading for the rest of the day.
+
+  Subscribers can tune the margin budget and leverage, which together size every
+  position from a fixed fraction of budget at risk; a larger budget scales
+  exposure, while higher leverage only changes margin usage, not the risk taken
+  per trade. They can also adjust the per-trade risk fraction, the daily loss
+  cap, the maximum number of simultaneous positions and the symbol list.
+
+  The strategy underperforms in strongly trending sessions where stretched
+  moves keep extending, in thin holiday liquidity where resting limit orders
+  miss their fills, and around scheduled macro releases that land inside the
+  trading sessions. Backtest results are not a guarantee of live performance,
+  drawdowns will occur, and slippage plus fees erode edge; subscribe only with
+  capital you can afford to lose.
+
+market_type: contract
+trading_symbols: ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+tags: ["intraday", "vwap", "breakout", "session", "perpetual", "day-trade", "btc", "eth", "sol"]
+
+output_kind: trade_strategy
+decision_mode: deterministic
+backtest_support: full
+runtime_profile: deterministic
+execution_mode: follow_trade
+follow_trade_supported: true
+
+schedule:
+  cron: "*/15 * * * *"
+  tz: "UTC"
+
+# Defaults MUST equal src/params.py (checked by tools/check_package.py).
+strategy_config:
+  trading_symbols: ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+  margin_budget: "1000"
+  leverage: 3
+  risk_pct_per_trade: 0.5
+  min_24h_notional_usdt: 200000000
+  max_spread_bps: 3.0
+  regime_atr_period: 14
+  regime_atr_pct_min: 0.6
+  regime_atr_pct_max: 3.0
+  bias_ema_period: 20
+  bias_flat_slope_pct: 0.05
+  session_windows: ["07:00-10:00", "13:30-16:30"]
+  enable_signal_a: true
+  vwap_anchor: "utc_day"
+  vwap_trigger_sigma: 1.5
+  vwap_limit_sigma: 1.0
+  vwap_stop_sigma: 2.0
+  rsi_period: 14
+  rsi_overbought: 70
+  rsi_oversold: 30
+  signal_a_expiry_minutes: 45
+  enable_signal_b: true
+  volume_spike_mult: 2.5
+  volume_median_bars: 20
+  breakout_lookback_bars: 20
+  signal_b_expiry_minutes: 30
+  signal_b_target_r: 2.0
+  signal_b_trail_r: 1.0
+  funding_hours_utc: [0, 8, 16]
+  funding_flatten_lead_minutes: 10
+  funding_direction_aware: true
+  max_concurrent_positions: 2
+  max_trades_per_day_symbol: 3
+  daily_loss_cap_pct: 1.5
+  daily_cap_flatten: true
+  time_stop_minutes: 120
+  eod_flatten_time: "23:45"
+  reconcile_interval_minutes: 5
+  halt_on_reconcile_mismatch: true
+  backtest_days: 90
+  warmup_days: 5
+
+# Only these fields are subscriber-editable. Signal parameters stay fixed per
+# version (one variable changes per version, see docs/VERSIONING.md).
+user_config_schema:
+  trading_symbols:
+    type: array
+    item_type: string
+    default: ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+    options: ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+    aliases:
+      btc: BTCUSDT
+      bitcoin: BTCUSDT
+      eth: ETHUSDT
+      ethereum: ETHUSDT
+      sol: SOLUSDT
+      solana: SOLUSDT
+    min_items: 1
+    max_items: 3
+    label: "Trading symbols"
+  margin_budget:
+    type: string
+    default: "1000"
+    pattern: "^[0-9]+(\\.[0-9]+)?$"
+    label: "Margin budget USDT (risk denominator)"
+  leverage:
+    type: integer
+    default: 3
+    min: 1
+    max: 10
+    aliases:
+      3x: 3
+      5x: 5
+    label: "Leverage"
+  risk_pct_per_trade:
+    type: number
+    default: 0.5
+    min: 0.1
+    max: 1.0
+    label: "Risk per trade (% of margin budget)"
+  daily_loss_cap_pct:
+    type: number
+    default: 1.5
+    min: 0.5
+    max: 3.0
+    label: "Daily loss cap (% of margin budget)"
+  max_concurrent_positions:
+    type: integer
+    default: 2
+    min: 1
+    max: 3
+    label: "Max concurrent positions"
+  backtest_days:
+    type: integer
+    default: 90
+    min: 30
+    max: 180
+    label: "Backtest window (days)"
