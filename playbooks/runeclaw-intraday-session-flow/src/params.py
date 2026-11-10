@@ -15,7 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, fields
 from typing import Any
 
-PLAYBOOK_VERSION = "0.4.0"
+PLAYBOOK_VERSION = "0.5.0"
 DECISION_INTERVAL_MINUTES = 15  # 15m execution bars and 15m live cadence
 
 
@@ -71,7 +71,7 @@ class PlaybookParams:
     max_trades_per_day_symbol: int = 3
     daily_loss_cap_pct: float = 1.5
     daily_cap_flatten: bool = True
-    time_stop_minutes: int = 120
+    time_stop_minutes: int = 180      # v0.5: 120 → 180 (14 of 109 v0.4 trades were cut by the time stop)
     eod_flatten_time: str = "23:45"
     # --- ops ---------------------------------------------------------------
     reconcile_interval_minutes: int = 5    # requested cadence; effective = scheduler cadence

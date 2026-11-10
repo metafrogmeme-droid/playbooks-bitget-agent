@@ -157,8 +157,11 @@ class RiskTests(unittest.TestCase):
         self.assertTrue(risk.eod_flatten_due(datetime(2026, 1, 5, 23, 45, tzinfo=UTC), p))
         self.assertFalse(risk.eod_flatten_due(datetime(2026, 1, 5, 23, 30, tzinfo=UTC), p))
         opened = datetime(2026, 1, 5, 8, 0, tzinfo=UTC)
-        self.assertFalse(risk.time_stop_due(opened, datetime(2026, 1, 5, 9, 45, tzinfo=UTC), p))
-        self.assertTrue(risk.time_stop_due(opened, datetime(2026, 1, 5, 10, 0, tzinfo=UTC), p))
+        self.assertEqual(p.time_stop_minutes, 180)  # v0.5 default
+        self.assertFalse(risk.time_stop_due(opened, datetime(2026, 1, 5, 10, 45, tzinfo=UTC), p))
+        self.assertTrue(risk.time_stop_due(opened, datetime(2026, 1, 5, 11, 0, tzinfo=UTC), p))
+        p120 = PlaybookParams(time_stop_minutes=120)
+        self.assertTrue(risk.time_stop_due(opened, datetime(2026, 1, 5, 10, 0, tzinfo=UTC), p120))
 
     def test_sizing(self) -> None:
         p = self.params  # 1000 USDT budget, 0.5% risk = 5 USDT
