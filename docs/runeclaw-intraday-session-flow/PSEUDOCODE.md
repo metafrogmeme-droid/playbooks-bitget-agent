@@ -1,4 +1,4 @@
-# RUNECLAW Intraday Session Flow — rule pseudo-code (v0.3)
+# RUNECLAW Intraday Session Flow — rule pseudo-code (v0.5)
 
 All times UTC. `now` is the close time of the last completed 15-minute bar
 (replay) or the wall clock at the scheduled run (live, every 15 minutes).
@@ -142,7 +142,7 @@ for each open trade (checked in this order):
                 if pays or rate unknown                          → FLATTEN "funding_window[_rate_unknown]"
         REPLAY: rate = latest historical funding row ≤ now for the symbol (injected by main_backtest)
                 same test as LIVE; no row → FLATTEN "funding_window_rate_unknown" (reported as degraded)
-    open for ≥ time_stop_minutes (120)                           → FLATTEN "time_stop"
+    open for ≥ time_stop_minutes (180; was 120 before v0.5)      → FLATTEN "time_stop"
     otherwise:
         kind A: target ← current vwap_session (modify TP plan order)
         kind B: best ← max(best, high) [long] / min(best, low) [short]

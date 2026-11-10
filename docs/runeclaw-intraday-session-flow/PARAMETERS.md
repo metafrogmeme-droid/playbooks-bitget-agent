@@ -1,4 +1,4 @@
-# Parameter table — RUNECLAW Intraday Session Flow v0.4
+# Parameter table — RUNECLAW Intraday Session Flow v0.5
 
 Generated from `src/params.py` by `tools/gen_params_table.py`; defaults are
 identical in `manifest.yaml -> strategy_config`. *Tunable* marks the fields a
@@ -42,7 +42,7 @@ through a new version (one variable per version).
 | `max_trades_per_day_symbol` | 3 | 1 – 6 | trades | no | Filled entries per symbol per UTC day |
 | `daily_loss_cap_pct` | 1.5 | 0.5 – 3.0 | % of budget | yes | Realised loss that halts trading until next UTC day |
 | `daily_cap_flatten` | True | true / false | - | no | Also flatten open positions when the cap is hit |
-| `time_stop_minutes` | 120 | 30 – 240 | min | no | Close trades that have not reached target in time |
+| `time_stop_minutes` | 180 | 30 – 240 | min | no | Close trades that have not reached target in time |
 | `eod_flatten_time` | 23:45 | 23:00 – 23:45 | HH:MM UTC | no | Hard end-of-day flatten time |
 | `reconcile_interval_minutes` | 5 | 5 – 15 | min | no | Requested reconciliation cadence (scheduler floor is 15 min) |
 | `halt_on_reconcile_mismatch` | True | true / false | - | no | Block new entries while a position/fill mismatch is flagged |

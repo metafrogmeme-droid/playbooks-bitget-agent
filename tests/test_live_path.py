@@ -99,7 +99,7 @@ class DecideTests(unittest.TestCase):
         }
 
     def test_time_stop(self) -> None:
-        self._open(opened_minutes_ago=121)
+        self._open(opened_minutes_ago=181)
         d = main_live.decide("SOLUSDT", None, "ok", ticker(), 0.0001, NOW, self.params, self.ledger, self.state)
         self.assertEqual((d["action"], d["intent"], d["reason"]), ("close", "flatten", "time_stop"))
 

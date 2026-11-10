@@ -1,5 +1,17 @@
 # Changelog — RUNECLAW Intraday Session Flow
 
+## v0.5.0 — 2026-11-10
+Change:      time_stop_minutes 120 → 180. Signal A stays disabled; everything else unchanged.
+Hypothesis:  In v0.4, 14 of 109 Signal B trades were closed by the two-hour time stop before
+             reaching stop or 2R target. A 2R breakout on 15m bars often needs more than two
+             hours; giving it three should convert some time-stops into targets without
+             changing entry quality. Risk: more time in market → more stops and funding exits.
+Baseline:    v0.4.0 run pbrun-3e8aac580d17 (RTs=109 PF=1.03 DD=5.9 %, +8.5 USDT).
+Window:      pinned (backtest_end_utc = 2026-11-09T17:15Z), BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT
+Mode:        backtest only — no live orders, no trade permissions, no paid data calls
+Result:      not yet run → verdict PENDING
+Decision:    run sandbox evaluation; report and stop for the owner's next decision
+
 ## v0.4.0 — 2026-11-10
 Change:      enable_signal_a true → false. Signal A (VWAP reversion) is disabled for one
              version; Signal B, regime filter, sessions, funding rule, risk limits and

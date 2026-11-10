@@ -1,6 +1,6 @@
 # Versioning & evaluation policy
 
-**Current version: v0.4.0** (`src/params.py::PLAYBOOK_VERSION`, `manifest.yaml::version`).
+**Current version: v0.5.0** (`src/params.py::PLAYBOOK_VERSION`, `manifest.yaml::version`).
 
 ## Rules
 
@@ -43,7 +43,8 @@
 | v0.2 | Universe → all liquid crypto USDT-M perps from the scan (adds XRPUSDT) | More independent round-trips |
 | v0.3 | Direction-aware funding rule in replay (historical funding rates injected) | v0.2 had 29 funding exits of 148 round-trips |
 | v0.4 | `enable_signal_a` true → false (isolate Signal B) | Attribute the loss to one engine |
-| v0.5 | one of: `signal_b_target_r` 2.0 → 1.5; `time_stop_minutes` 120 → 180; Signal A back on with `vwap_trigger_sigma` 2.0 | v0.4 showed Signal A was the losing engine and Signal B alone is break-even (PF 1.03, DD 5.9 %) |
+| v0.5 | `time_stop_minutes` 120 → 180 | v0.4: Signal B alone break-even (PF 1.03, DD 5.9 %); 14 of 109 trades cut by the time stop |
+| v0.6 | `signal_b_target_r` 2.0 → 1.5, or Signal A back on with `vwap_trigger_sigma` 2.0 | depending on v0.5 |
 
 ## Changelog entry template
 

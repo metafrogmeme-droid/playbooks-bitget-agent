@@ -1,4 +1,4 @@
-# RUNECLAW Intraday Session Flow (v0.4)
+# RUNECLAW Intraday Session Flow (v0.5)
 
 Day-trading Playbook for the most liquid Bitget USDT-M perpetuals. The universe
 is every contract that passed the liquidity scan (24h volume ≥ 200M USDT,
@@ -48,8 +48,8 @@ close-position call.
   live VWAP every bar).
 * Signal B: stop at the breakout bar's opposite extreme, target at 2R, stop
   trailed 1R behind the best price once the trade is 1R in profit.
-* Time stop: any trade open longer than 120 minutes without reaching its target
-  is closed.
+* Time stop: any trade open longer than 180 minutes without reaching its target
+  is closed (120 minutes in v0.1–v0.4).
 * Funding rule: 10 minutes before the 00:00 / 08:00 / 16:00 UTC settlements
   (effectively the last 15-minute decision point) a position that would pay
   funding is flattened; re-entry only on a fresh signal.
