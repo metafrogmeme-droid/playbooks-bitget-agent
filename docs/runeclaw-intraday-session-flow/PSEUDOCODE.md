@@ -1,4 +1,4 @@
-# RUNECLAW Intraday Session Flow — rule pseudo-code (v0.8.1)
+# RUNECLAW Intraday Session Flow — rule pseudo-code (v0.9)
 
 All times UTC. `now` is the close time of the last completed 15-minute bar
 (replay) or the wall clock at the scheduled run (live, every 15 minutes).
@@ -115,6 +115,9 @@ LONG  if spike and close > prior_high and bias == "up":
 SHORT if spike and close < prior_low  and bias == "down":
     limit = entry ; stop = high ; R = high − entry ; target = entry − signal_b_target_r·R ; expiry = 30 min
 ```
+Optional cost-aware filter (research, off by default): drop the candidate when
+R / entry · 100 < signal_b_min_r_pct. Tested in v0.9 and not adopted.
+
 Either way the order is a limit order. In close mode it is filled as soon as price
 trades back to the close, and expires unfilled if price runs away without touching it.
 Because the stop stays at the bar's opposite extreme, R is larger with the close entry

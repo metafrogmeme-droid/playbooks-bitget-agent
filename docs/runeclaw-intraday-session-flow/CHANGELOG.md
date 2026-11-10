@@ -1,5 +1,21 @@
 # Changelog — RUNECLAW Intraday Session Flow
 
+## v0.9.0 — 2026-11-10 — offline research: cost-aware stop-distance filter (not adopted)
+Change:      New opt-in option signal_b_min_r_pct (default 0 = off). Default behaviour is
+             unchanged and replays identically to v0.5. Adds an offline research harness
+             under research/ (public data, local NautilusTrader replay, no API key).
+Question:    Can the profit factor be fixed without overfitting?
+Finding:     Fees consume the edge: before fees PF is 1.57 in-sample but only 1.14
+             out-of-sample and 1.27 on a fresh holdout — below 1.3 before any cost.
+Test:        Skip entries whose stop distance is below r_min % of price (levels fixed in
+             advance at 0.20 / 0.32 / 0.50). Local replay, three 90-day windows:
+             r_min 0.00  in-sample 107 RTs PF 1.09 | out-of-sample 110 RTs PF 0.79 | holdout 145 RTs PF 0.89
+             r_min 0.20  in-sample  87 RTs PF 1.35 | out-of-sample  97 RTs PF 0.74 | holdout 137 RTs PF 0.90
+             r_min 0.32  in-sample  71 RTs PF 1.40 | out-of-sample  72 RTs PF 0.68 | holdout 116 RTs PF 0.87
+             r_min 0.50  in-sample  41 RTs PF 1.56 | out-of-sample  34 RTs PF 1.28 | holdout  57 RTs PF 0.71
+Verdict:     Passes the bar in-sample, fails on both other windows → overfit, NOT adopted.
+Decision:    Default stays v0.5 behaviour. No paper or live trading. See RESEARCH_v0.9.md.
+
 ## 2026-11-10 — confirmation run of the restored default (no strategy change, no new version)
 Run:         pbrun-44028019082f — v0.8.1 package at main (d2b4375), in-sample window
              2026-08-11 17:15 → 2026-11-09 17:15 UTC, historical replay only.

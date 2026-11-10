@@ -150,6 +150,22 @@ class FeatureTests(unittest.TestCase):
         self.assertAlmostEqual(s.target_price, 124.0)  # 2R above the midpoint
         self.assertIn("entry=midpoint", s.reasons)
 
+    def test_min_r_filter_is_off_by_default_and_filters_tight_stops(self) -> None:
+        row = {
+            "close": 121.0, "high": 122.0, "low": 118.0, "volume": 30.0,   # midpoint 120, stop 118 -> R = 1.667 % of entry
+            "vwap_session": 100.0, "vwap_sigma": 5.0, "rsi": 60.0, "bias_slope_pct": 0.2,
+            "vol_median_prev": 10.0, "prior_high": 120.0, "prior_low": 90.0,
+        }
+        self.assertEqual(PlaybookParams().signal_b_min_r_pct, 0.0)
+        manifest = yaml.safe_load((PKG / "manifest.yaml").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["strategy_config"]["signal_b_min_r_pct"], 0.0)
+        self.assertEqual(len(features.detect_signals(row, PlaybookParams())), 1)
+        self.assertEqual(len(features.detect_signals(row, PlaybookParams(signal_b_min_r_pct=1.6))), 1)
+        self.assertEqual(features.detect_signals(row, PlaybookParams(signal_b_min_r_pct=1.7)), [])
+        short_row = dict(row, close=89.0, high=92.0, low=88.0, bias_slope_pct=-0.2)   # midpoint 90, stop 92 -> R = 2.22 %
+        self.assertEqual(len(features.detect_signals(short_row, PlaybookParams(signal_b_min_r_pct=2.2))), 1)
+        self.assertEqual(features.detect_signals(short_row, PlaybookParams(signal_b_min_r_pct=2.3)), [])
+
     def test_signal_b_midpoint_mode_reproduces_v05(self) -> None:
         row = {
             "close": 121.0, "high": 122.0, "low": 118.0, "volume": 30.0,

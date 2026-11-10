@@ -264,7 +264,7 @@ def detect_signals(row: Any, params: PlaybookParams) -> list[SignalCandidate]:
         entry_tag = f"entry={mode}"
         if spike and close > float(row["prior_high"]) and bias == "up":
             r = entry - low
-            if r > 0:
+            if r > 0 and r / entry * 100.0 >= params.signal_b_min_r_pct:
                 out.append(
                     SignalCandidate(
                         kind="B", side="long", limit_price=entry, stop_price=low,
@@ -275,7 +275,7 @@ def detect_signals(row: Any, params: PlaybookParams) -> list[SignalCandidate]:
                 )
         elif spike and close < float(row["prior_low"]) and bias == "down":
             r = high - entry
-            if r > 0:
+            if r > 0 and r / entry * 100.0 >= params.signal_b_min_r_pct:
                 out.append(
                     SignalCandidate(
                         kind="B", side="short", limit_price=entry, stop_price=high,
