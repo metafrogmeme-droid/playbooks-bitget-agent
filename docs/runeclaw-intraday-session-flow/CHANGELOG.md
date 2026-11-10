@@ -1,5 +1,48 @@
 # Changelog — RUNECLAW Intraday Session Flow
 
+## v0.8.0 — 2026-11-10
+Change:      Structural: Signal B entry limit price moves from the breakout bar's midpoint to
+             the breakout bar's close (signal_b_entry_mode midpoint → close). Order type
+             (limit), expiry (30 min), stop (bar's opposite extreme), target (2R) unchanged.
+Baseline:    v0.5.0 parameters — the only configuration with both an in-sample and an
+             out-of-sample result. volume_spike_mult and signal_b_target_r therefore return
+             from the v0.6 values (3.0, 1.5) to the v0.5 values (2.5, 2.0). The package
+             differs from v0.5.0 (commit 3ec6949) only by the entry mode.
+Hypothesis:  A limit at the midpoint only fills when price pulls back half the breakout
+             bar, which may select failing breakouts and miss those that run. Entering at
+             the close should improve the target/stop mix.
+Side effect: R is measured from the entry, so with the close entry R is larger, size is
+             smaller for the same 5 USDT risk, and the 2R target is further away.
+Baselines:   in-sample v0.5 pbrun-77fb5c12d8f8 (RTs=109 PF=1.07 DD=5.7 %);
+             out-of-sample v0.5 pbrun-d8b8abbb3a69 (RTs=110 PF=0.59 DD=21.5 %).
+Windows:     in-sample 2026-08-11 17:15 → 2026-11-09 17:15 UTC;
+             out-of-sample 2026-05-13 17:15 → 2026-08-11 17:15 UTC (same split as v0.7).
+             The out-of-sample window still runs with the funding fallback (no funding
+             history served for it), exactly as its v0.5 baseline did.
+Mode:        backtest only — no live orders, no trade permissions, no paid data calls
+Result:      both runs completed on the same bars as their v0.5 baselines (8,869 per symbol).
+
+             |                          | In-sample            | Out-of-sample        |
+             | Run                      | pbrun-09cb4e435830   | pbrun-510927f72ccd   |
+             | v0.5 midpoint  PF/DD/RTs | 1.07 / 5.7 % / 109   | 0.59 / 21.5 % / 110  |
+             | v0.8 close     PF/DD/RTs | 1.01 / 10.4 % / 159  | 0.52 / 21.2 % / 136  |
+             | v0.8 win rate, net       | 55 %, +3.3 USDT      | 43 %, −186.4 USDT    |
+             | v0.8 expectancy (nominal)| +0.00 R              | −0.27 R              |
+             | Verdict                  | FAIL (PF and DD)     | FAIL (PF and DD)     |
+
+             v0.8 exits in-sample: stop 74, target 35, funding 28, time stop 22 (19 kept
+             through funding). Out-of-sample: stop 60, funding rate-unknown 41, time stop 18,
+             target 17.
+Reading:     The close entry fills far more often (159 vs 109 and 136 vs 110 round-trips),
+             so the midpoint limit was indeed skipping many breakouts. But the added trades
+             are not profitable: profit factor is slightly lower in both windows, and
+             in-sample drawdown rose from 5.7 % to 10.4 %, now failing that criterion too.
+             The adverse-selection hypothesis is not supported.
+Decision:    FAIL in both windows. Not recommended as a baseline. Parameter tuning
+             (v0.4–v0.6), an out-of-sample check (v0.7) and this structural entry change
+             have all failed the bar; Signal B has no demonstrated edge. Stopped for the
+             owner's decision.
+
 ## v0.7 — 2026-11-10 — out-of-sample check (no strategy change, no new package version)
 Change:      None. v0.5.0 package exactly as merged (commit 3ec6949) replayed on the 90 days
              immediately before the original window; only backtest_end_utc differs

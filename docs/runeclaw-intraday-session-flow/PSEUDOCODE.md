@@ -1,4 +1,4 @@
-# RUNECLAW Intraday Session Flow — rule pseudo-code (v0.6)
+# RUNECLAW Intraday Session Flow — rule pseudo-code (v0.8)
 
 All times UTC. `now` is the close time of the last completed 15-minute bar
 (replay) or the wall clock at the scheduled run (live, every 15 minutes).
@@ -107,14 +107,19 @@ already reverted past 1.0σ the order rests and may expire unfilled.
 ## 6. Signal B — volume-spike breakout (features.detect_signals)
 
 ```
-spike = volume ≥ volume_spike_mult (3.0; 2.5 before v0.6) · vol_median_prev
-# signal_b_target_r = 1.5 (2.0 before v0.6)
-mid   = (high + low) / 2
+spike = volume ≥ volume_spike_mult (2.5) · vol_median_prev        # signal_b_target_r = 2.0
+entry = close                  if signal_b_entry_mode == "close"     # v0.8+
+        (high + low) / 2       if signal_b_entry_mode == "midpoint"  # v0.1–v0.6
 LONG  if spike and close > prior_high and bias == "up":
-    limit = mid ; stop = low  ; R = mid − low ; target = mid + signal_b_target_r·R ; expiry = 30 min
+    limit = entry ; stop = low  ; R = entry − low  ; target = entry + signal_b_target_r·R ; expiry = 30 min
 SHORT if spike and close < prior_low  and bias == "down":
-    limit = mid ; stop = high ; R = high − mid ; target = mid − signal_b_target_r·R ; expiry = 30 min
+    limit = entry ; stop = high ; R = high − entry ; target = entry − signal_b_target_r·R ; expiry = 30 min
 ```
+The order is still a limit order: at the close price it is filled as soon as price
+trades back to the close, and expires unfilled if price runs away without touching it.
+Because the stop stays at the bar's opposite extreme, R is larger with the close entry
+(for a bar closing near its high, roughly double the midpoint R), so position size is
+smaller for the same risk and the target sits further away in price terms.
 If A and B fire on the same bar, B (trend) is taken.
 
 ## 7. Sizing (risk.size_from_risk) and order placement

@@ -254,27 +254,33 @@ def detect_signals(row: Any, params: PlaybookParams) -> list[SignalCandidate]:
     if params.enable_signal_b and _finite(row["vol_median_prev"], row["prior_high"], row["prior_low"]) and float(row["vol_median_prev"]) > 0:
         vol = float(row["volume"])
         spike = vol >= params.volume_spike_mult * float(row["vol_median_prev"])
-        mid = (high + low) / 2.0
+        mode = params.signal_b_entry_mode
+        if mode not in ("close", "midpoint"):
+            raise ValueError(f"unsupported signal_b_entry_mode={mode!r}; use 'close' or 'midpoint'")
+        # Entry limit price: the breakout bar's close (v0.8+) or its midpoint (v0.1-v0.6).
+        # The stop stays at the bar's opposite extreme, so R is measured from the entry.
+        entry = close if mode == "close" else (high + low) / 2.0
+        entry_tag = f"entry={mode}"
         if spike and close > float(row["prior_high"]) and bias == "up":
-            r = abs(mid - low)
+            r = entry - low
             if r > 0:
                 out.append(
                     SignalCandidate(
-                        kind="B", side="long", limit_price=mid, stop_price=low,
-                        target_price=mid + params.signal_b_target_r * r,
+                        kind="B", side="long", limit_price=entry, stop_price=low,
+                        target_price=entry + params.signal_b_target_r * r,
                         expiry_minutes=params.signal_b_expiry_minutes, r_distance=r,
-                        reasons=(f"vol>={params.volume_spike_mult}x_median", "close>prior_high", "bias=up"),
+                        reasons=(f"vol>={params.volume_spike_mult}x_median", "close>prior_high", "bias=up", entry_tag),
                     )
                 )
         elif spike and close < float(row["prior_low"]) and bias == "down":
-            r = abs(high - mid)
+            r = high - entry
             if r > 0:
                 out.append(
                     SignalCandidate(
-                        kind="B", side="short", limit_price=mid, stop_price=high,
-                        target_price=mid - params.signal_b_target_r * r,
+                        kind="B", side="short", limit_price=entry, stop_price=high,
+                        target_price=entry - params.signal_b_target_r * r,
                         expiry_minutes=params.signal_b_expiry_minutes, r_distance=r,
-                        reasons=(f"vol>={params.volume_spike_mult}x_median", "close<prior_low", "bias=down"),
+                        reasons=(f"vol>={params.volume_spike_mult}x_median", "close<prior_low", "bias=down", entry_tag),
                     )
                 )
     return out

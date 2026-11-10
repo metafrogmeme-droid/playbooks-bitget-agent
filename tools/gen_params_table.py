@@ -45,6 +45,7 @@ SPEC: dict[str, tuple[str, str, bool, str]] = {
     "volume_spike_mult": ("1.5 – 5.0", "× median", False, "Bar volume vs median of previous bars"),
     "volume_median_bars": ("10 – 50", "15m bars", False, "Median window (current bar excluded)"),
     "breakout_lookback_bars": ("10 – 50", "15m bars", False, "Prior high/low window (current bar excluded)"),
+    "signal_b_entry_mode": ("close / midpoint", "-", False, "Signal B entry limit price: breakout bar close (v0.8+) or bar midpoint (v0.1–v0.6)"),
     "signal_b_expiry_minutes": ("15 – 60", "min", False, "Resting time of a Signal B limit order"),
     "signal_b_target_r": ("1.0 – 4.0", "R", False, "Breakout target as multiple of initial risk"),
     "signal_b_trail_r": ("0.5 – 2.0", "R", False, "Trail distance once trade is that many R in profit"),
@@ -105,7 +106,7 @@ def main(check_only: bool) -> int:
         return 1
 
     lines = [
-        "# Parameter table — RUNECLAW Intraday Session Flow v0.6",
+        "# Parameter table — RUNECLAW Intraday Session Flow v0.8",
         "",
         "Generated from `src/params.py` by `tools/gen_params_table.py`; defaults are",
         "identical in `manifest.yaml -> strategy_config`. *Tunable* marks the fields a",

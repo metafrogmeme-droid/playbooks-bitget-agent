@@ -7,7 +7,7 @@ display_name_i18n:
   es: "RUNECLAW Flujo Intradía por Sesión"
   ja: "RUNECLAW セッションフロー日中戦略"
   vi: "RUNECLAW Dòng chảy phiên trong ngày"
-version: "0.6.0"
+version: "0.8.0"
 description: "Intraday VWAP-reversion and volume-breakout day trading on the most liquid Bitget USDT-M perpetuals, flat before midnight UTC"
 description_i18n:
   en: "Intraday VWAP-reversion and volume-breakout day trading on the most liquid Bitget USDT-M perpetuals, flat before midnight UTC"
@@ -96,11 +96,12 @@ strategy_config:
   rsi_oversold: 30
   signal_a_expiry_minutes: 45
   enable_signal_b: true
-  volume_spike_mult: 3.0
+  volume_spike_mult: 2.5
   volume_median_bars: 20
   breakout_lookback_bars: 20
+  signal_b_entry_mode: "close"
   signal_b_expiry_minutes: 30
-  signal_b_target_r: 1.5
+  signal_b_target_r: 2.0
   signal_b_trail_r: 1.0
   funding_hours_utc: [0, 8, 16]
   funding_flatten_lead_minutes: 10

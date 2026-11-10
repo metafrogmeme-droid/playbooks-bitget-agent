@@ -95,7 +95,7 @@ class FeatureTests(unittest.TestCase):
         }
         self.assertEqual(features.detect_signals(row, self.params), [])
 
-    def test_signal_b_long_fires(self) -> None:
+    def test_signal_b_long_enters_at_close(self) -> None:
         row = {
             "close": 121.0, "high": 122.0, "low": 118.0, "volume": 30.0,
             "vwap_session": 100.0, "vwap_sigma": 5.0, "rsi": 60.0, "bias_slope_pct": 0.2,
@@ -104,23 +104,41 @@ class FeatureTests(unittest.TestCase):
         sigs = features.detect_signals(row, self.params)
         self.assertEqual([(s.kind, s.side) for s in sigs], [("B", "long")])
         s = sigs[0]
-        self.assertAlmostEqual(s.limit_price, 120.0)
-        self.assertAlmostEqual(s.stop_price, 118.0)
-        self.assertAlmostEqual(s.target_price, 123.0)  # 1.5R above mid (v0.6)
+        self.assertAlmostEqual(s.limit_price, 121.0)   # breakout bar close (v0.8)
+        self.assertAlmostEqual(s.stop_price, 118.0)    # opposite extreme, unchanged
+        self.assertAlmostEqual(s.r_distance, 3.0)
+        self.assertAlmostEqual(s.target_price, 127.0)  # 2R above the entry
         self.assertEqual(s.expiry_minutes, 30)
 
-    def test_signal_a_off_by_default_in_v04(self) -> None:
+    def test_signal_b_short_enters_at_close(self) -> None:
         row = {
-            "close": 110.0, "high": 110.5, "low": 109.0, "volume": 1.0,
-            "vwap_session": 100.0, "vwap_sigma": 5.0, "rsi": 75.0, "bias_slope_pct": 0.0,
+            "close": 89.0, "high": 92.0, "low": 88.0, "volume": 30.0,
+            "vwap_session": 100.0, "vwap_sigma": 5.0, "rsi": 40.0, "bias_slope_pct": -0.2,
             "vol_median_prev": 10.0, "prior_high": 120.0, "prior_low": 90.0,
         }
-        self.assertFalse(PlaybookParams().enable_signal_a)
-        self.assertEqual(features.detect_signals(row, PlaybookParams()), [])
+        s = features.detect_signals(row, self.params)[0]
+        self.assertEqual((s.kind, s.side), ("B", "short"))
+        self.assertAlmostEqual(s.limit_price, 89.0)
+        self.assertAlmostEqual(s.stop_price, 92.0)
+        self.assertAlmostEqual(s.target_price, 83.0)
 
-    def test_signal_b_needs_three_times_median_volume(self) -> None:
+    def test_signal_b_midpoint_mode_reproduces_v05(self) -> None:
         row = {
-            "close": 121.0, "high": 122.0, "low": 118.0, "volume": 29.0,   # 2.9x median: below the v0.6 threshold
+            "close": 121.0, "high": 122.0, "low": 118.0, "volume": 30.0,
+            "vwap_session": 100.0, "vwap_sigma": 5.0, "rsi": 60.0, "bias_slope_pct": 0.2,
+            "vol_median_prev": 10.0, "prior_high": 120.0, "prior_low": 90.0,
+        }
+        p = PlaybookParams(signal_b_entry_mode="midpoint")
+        s = features.detect_signals(row, p)[0]
+        self.assertAlmostEqual(s.limit_price, 120.0)
+        self.assertAlmostEqual(s.stop_price, 118.0)
+        self.assertAlmostEqual(s.target_price, 124.0)  # 2R above mid, as in v0.5
+        with self.assertRaises(ValueError):
+            features.detect_signals(row, PlaybookParams(signal_b_entry_mode="market"))
+
+    def test_signal_b_volume_threshold(self) -> None:
+        row = {
+            "close": 121.0, "high": 122.0, "low": 118.0, "volume": 24.0,   # 2.4x median: below 2.5x
             "vwap_session": 100.0, "vwap_sigma": 5.0, "rsi": 60.0, "bias_slope_pct": 0.2,
             "vol_median_prev": 10.0, "prior_high": 120.0, "prior_low": 90.0,
         }

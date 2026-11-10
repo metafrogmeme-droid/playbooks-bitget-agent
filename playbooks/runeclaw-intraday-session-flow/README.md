@@ -1,4 +1,4 @@
-# RUNECLAW Intraday Session Flow (v0.6)
+# RUNECLAW Intraday Session Flow (v0.8)
 
 Day-trading Playbook for the most liquid Bitget USDT-M perpetuals. The universe
 is every contract that passed the liquidity scan (24h volume ≥ 200M USDT,
@@ -28,10 +28,10 @@ too wild is event risk; both are skipped).
   standard deviations from the session VWAP and RSI(14) is overbought (short)
   or oversold (long), and the 1H bias is flat or on the trade's side, a limit
   order is placed at the 1.0σ band and expires after 45 minutes.
-* **Signal B, volume-spike breakout (trend).** When a bar prints at least 3.0×
+* **Signal B, volume-spike breakout (trend).** When a bar prints at least 2.5×
   the 20-bar median volume, closes beyond the prior 20-bar high/low, and the 1H
   bias points the same way, a limit order is placed at the breakout bar's
-  midpoint and expires after 30 minutes.
+  close and expires after 30 minutes (the bar's midpoint was used before v0.8).
 
 Position size risks 0.5 % of the margin budget between entry and stop. At most
 two positions are open at once and at most three trades per symbol per day.
@@ -46,7 +46,7 @@ close-position call.
 
 * Signal A: stop at the 2.0σ band, target at the session VWAP (re-pinned to the
   live VWAP every bar).
-* Signal B: stop at the breakout bar's opposite extreme, target at 1.5R, stop
+* Signal B: stop at the breakout bar's opposite extreme, target at 2R, stop
   trailed 1R behind the best price once the trade is 1R in profit.
 * Time stop: any trade open longer than 180 minutes without reaching its target
   is closed (120 minutes in v0.1–v0.4).
