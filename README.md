@@ -6,7 +6,7 @@ specifications, parameter tables and evaluation policy live under `docs/`.
 
 | Playbook | Version | Market | Status |
 |---|---|---|---|
-| [`runeclaw-intraday-session-flow`](playbooks/runeclaw-intraday-session-flow/) | v0.5.0 | Bitget USDT-M perps passing the liquidity scan (BTC, ETH, SOL, XRP), 15m execution, Signal B only, 180 min time stop | v0.1–v0.3.1 FAIL (best PF 0.88, DD ≥ 11 %); v0.4 FAIL (PF 1.03, DD 5.9 %); v0.5 **FAIL** (PF 1.07, DD 5.7 %, +2.2 %); no live run |
+| [`runeclaw-intraday-session-flow`](playbooks/runeclaw-intraday-session-flow/) | v0.6.0 | Bitget USDT-M perps passing the liquidity scan (BTC, ETH, SOL, XRP), 15m execution, Signal B only (3.0× volume, 1.5R target), 180 min time stop | v0.1–v0.3.1 FAIL (best PF 0.88, DD ≥ 11 %); v0.4 FAIL (PF 1.03, DD 5.9 %); v0.5 FAIL (PF 1.07, DD 5.7 %); v0.6 **PENDING**; no live run |
 
 ## Layout
 

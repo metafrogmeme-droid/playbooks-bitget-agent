@@ -106,7 +106,7 @@ class FeatureTests(unittest.TestCase):
         s = sigs[0]
         self.assertAlmostEqual(s.limit_price, 120.0)
         self.assertAlmostEqual(s.stop_price, 118.0)
-        self.assertAlmostEqual(s.target_price, 124.0)  # 2R above mid
+        self.assertAlmostEqual(s.target_price, 123.0)  # 1.5R above mid (v0.6)
         self.assertEqual(s.expiry_minutes, 30)
 
     def test_signal_a_off_by_default_in_v04(self) -> None:
@@ -117,6 +117,14 @@ class FeatureTests(unittest.TestCase):
         }
         self.assertFalse(PlaybookParams().enable_signal_a)
         self.assertEqual(features.detect_signals(row, PlaybookParams()), [])
+
+    def test_signal_b_needs_three_times_median_volume(self) -> None:
+        row = {
+            "close": 121.0, "high": 122.0, "low": 118.0, "volume": 29.0,   # 2.9x median: below the v0.6 threshold
+            "vwap_session": 100.0, "vwap_sigma": 5.0, "rsi": 60.0, "bias_slope_pct": 0.2,
+            "vol_median_prev": 10.0, "prior_high": 120.0, "prior_low": 90.0,
+        }
+        self.assertEqual(features.detect_signals(row, self.params), [])
 
     def test_regime_filter(self) -> None:
         self.assertEqual(features.regime_ok({"atr4h_pct": 0.3}, self.params), (False, "regime_chop"))

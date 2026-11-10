@@ -1,5 +1,21 @@
 # Changelog — RUNECLAW Intraday Session Flow
 
+## v0.6.0 — 2026-11-10
+Change:      TWO variables (owner-approved exception to the one-variable rule):
+             signal_b_target_r 2.0 → 1.5 and volume_spike_mult 2.5 → 3.0.
+             Signal A stays disabled; time stop stays 180 min; everything else unchanged.
+Hypothesis:  v0.5 had 51 stops vs 36 targets at 2R. A nearer target should convert some
+             stops and time/funding exits into wins; a stricter volume threshold should
+             remove the weakest breakouts. Risks: smaller winners lower the payoff ratio,
+             and fewer signals may push round-trips toward the 60 minimum.
+Caveat:      With two changes the result cannot be attributed to either alone. If the
+             version passes or looks promising, a follow-up should isolate each change.
+Baseline:    v0.5.0 run pbrun-77fb5c12d8f8 (RTs=109 PF=1.07 DD=5.7 %, +21.8 USDT).
+Window:      pinned (backtest_end_utc = 2026-11-09T17:15Z), BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT
+Mode:        backtest only — no live orders, no trade permissions, no paid data calls
+Result:      not yet run → verdict PENDING
+Decision:    run sandbox evaluation; report and stop for the owner's next decision
+
 ## v0.5.0 — 2026-11-10
 Change:      time_stop_minutes 120 → 180. Signal A stays disabled; everything else unchanged.
 Hypothesis:  In v0.4, 14 of 109 Signal B trades were closed by the two-hour time stop before

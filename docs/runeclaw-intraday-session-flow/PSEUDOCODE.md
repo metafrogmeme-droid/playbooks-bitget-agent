@@ -1,4 +1,4 @@
-# RUNECLAW Intraday Session Flow — rule pseudo-code (v0.5)
+# RUNECLAW Intraday Session Flow — rule pseudo-code (v0.6)
 
 All times UTC. `now` is the close time of the last completed 15-minute bar
 (replay) or the wall clock at the scheduled run (live, every 15 minutes).
@@ -107,7 +107,8 @@ already reverted past 1.0σ the order rests and may expire unfilled.
 ## 6. Signal B — volume-spike breakout (features.detect_signals)
 
 ```
-spike = volume ≥ volume_spike_mult (2.5) · vol_median_prev
+spike = volume ≥ volume_spike_mult (3.0; 2.5 before v0.6) · vol_median_prev
+# signal_b_target_r = 1.5 (2.0 before v0.6)
 mid   = (high + low) / 2
 LONG  if spike and close > prior_high and bias == "up":
     limit = mid ; stop = low  ; R = mid − low ; target = mid + signal_b_target_r·R ; expiry = 30 min
