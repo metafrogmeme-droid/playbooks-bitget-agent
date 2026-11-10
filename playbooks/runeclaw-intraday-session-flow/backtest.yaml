@@ -1,0 +1,87 @@
+# Nautilus replay spec. Instrument tick/lot/fee values verified against
+# https://api.bitget.com/api/v2/mix/market/contracts?productType=USDT-FUTURES on 2026-11-09
+# (BTC pricePlace 1 / volumePlace 4, ETH 2 / 2, SOL 3 / 1, XRP 4 / 0, maker 0.02% taker 0.06%).
+# No data_requirements: the strategy computes its features from raw OHLCV so the
+# platform's evidence replay and the author replay run the same code path.
+venue:
+  name: BITGET
+  account_type: MARGIN
+  oms_type: NETTING
+  starting_balances:
+    - amount: 10000
+      currency: USDT
+
+strategy:
+  module: strategy
+  class: RuneclawSessionFlow
+  config_class: RuneclawSessionFlowConfig
+  config:
+    order_id_tag: "RC01"
+    # strategy_params, instrument_ids and bar_types are injected by
+    # src/main_backtest.py from manifest.strategy_config at run time so the
+    # manifest stays the single source of truth.
+    strategy_params: {}
+
+execution:
+  # Author's choice; main_backtest.py overrides this with
+  # [now - backtest_days, now) after a warm-up period.
+  start: "2026-08-01T00:00:00Z"
+  end: "2026-11-01T00:00:00Z"
+
+instruments:
+  - id: BTCUSDT.BITGET
+    kind: perpetual
+    raw_symbol: BTCUSDT
+    base_currency: BTC
+    quote_currency: USDT
+    settlement_currency: USDT
+    price_precision: 1
+    size_precision: 4
+    price_increment: "0.1"
+    size_increment: "0.0001"
+    lot_size: "0.0001"
+    maker_fee: "0.0002"
+    taker_fee: "0.0006"
+    bar_type: BTCUSDT.BITGET-15-MINUTE-LAST-EXTERNAL
+  - id: ETHUSDT.BITGET
+    kind: perpetual
+    raw_symbol: ETHUSDT
+    base_currency: ETH
+    quote_currency: USDT
+    settlement_currency: USDT
+    price_precision: 2
+    size_precision: 2
+    price_increment: "0.01"
+    size_increment: "0.01"
+    lot_size: "0.01"
+    maker_fee: "0.0002"
+    taker_fee: "0.0006"
+    bar_type: ETHUSDT.BITGET-15-MINUTE-LAST-EXTERNAL
+  - id: SOLUSDT.BITGET
+    kind: perpetual
+    raw_symbol: SOLUSDT
+    base_currency: SOL
+    quote_currency: USDT
+    settlement_currency: USDT
+    price_precision: 3
+    size_precision: 1
+    price_increment: "0.001"
+    size_increment: "0.1"
+    lot_size: "0.1"
+    maker_fee: "0.0002"
+    taker_fee: "0.0006"
+    bar_type: SOLUSDT.BITGET-15-MINUTE-LAST-EXTERNAL
+  - id: XRPUSDT.BITGET
+    kind: perpetual
+    raw_symbol: XRPUSDT
+    base_currency: XRP
+    quote_currency: USDT
+    settlement_currency: USDT
+    price_precision: 4
+    size_precision: 0
+    price_increment: "0.0001"
+    size_increment: "1"
+    lot_size: "1"
+    maker_fee: "0.0002"
+    taker_fee: "0.0006"
+    bar_type: XRPUSDT.BITGET-15-MINUTE-LAST-EXTERNAL
