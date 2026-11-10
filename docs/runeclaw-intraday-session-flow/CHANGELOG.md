@@ -1,5 +1,13 @@
 # Changelog — RUNECLAW Intraday Session Flow
 
+## 2026-11-10 — premise review (no code or parameter change, no new signal)
+Added:       PREMISE_REVIEW.md — what the evidence shows, the cost hurdle, candidate
+             premises and who would pay for each, the data split for any future test, and
+             kill criteria fixed in advance. No breakout variants will be tried.
+Measured:    the funding fallback used on older windows lowers Signal B's in-sample PF
+             from 1.09 to 0.94 and leaves Signal C unchanged (0.70 vs 0.71).
+Status:      waiting for the owner's decision; default configuration unchanged.
+
 ## v0.10.0 — 2026-11-10 — offline research: Signal C, session opening-range breakout
 Change:      New signal, off by default (enable_signal_c: false). Default behaviour is
              unchanged (v0.5 configuration).
