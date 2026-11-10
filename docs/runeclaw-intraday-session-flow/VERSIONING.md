@@ -1,8 +1,12 @@
 # Versioning & evaluation policy
 
-**Current version: v0.3.1** (`src/params.py::PLAYBOOK_VERSION`, `manifest.yaml::version`).
+**Current version: v0.4.0** (`src/params.py::PLAYBOOK_VERSION`, `manifest.yaml::version`).
 
 ## Rules
+
+0. **Same bars for every version.** `backtest_end_utc` pins the evaluation end so
+   successive versions replay identical data; it moves only when a new baseline
+   window is adopted, and that move is itself a changelog entry.
 
 1. **One variable per version.** A new version changes exactly one parameter
    or one rule. The change, the hypothesis and the comparison baseline are
@@ -38,9 +42,8 @@
 |---|---|---|
 | v0.2 | Universe → all liquid crypto USDT-M perps from the scan (adds XRPUSDT) | More independent round-trips |
 | v0.3 | Direction-aware funding rule in replay (historical funding rates injected) | v0.2 had 29 funding exits of 148 round-trips |
-| v0.4 | `vwap_trigger_sigma` 1.5 → 2.0 | Fewer, cleaner reversion entries (v0.1: stops 55 vs targets 38) |
-| v0.5 | `signal_b_target_r` 2.0 → 1.5 | Higher hit rate on breakouts |
-| v0.6 | Add 1H ADX or range-width gate for Signal A only | Avoid fading real trends |
+| v0.4 | `enable_signal_a` true → false (isolate Signal B) | Attribute the loss to one engine |
+| v0.5 | depending on v0.4: `vwap_trigger_sigma` 1.5 → 2.0, or `vwap_stop_sigma` 2.0 → 1.5, or `signal_b_target_r` 2.0 → 1.5 | Fix the engine v0.4 shows is losing |
 
 ## Changelog entry template
 

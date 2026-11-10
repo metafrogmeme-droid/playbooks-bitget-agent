@@ -1,4 +1,4 @@
-# Parameter table — RUNECLAW Intraday Session Flow v0.3
+# Parameter table — RUNECLAW Intraday Session Flow v0.4
 
 Generated from `src/params.py` by `tools/gen_params_table.py`; defaults are
 identical in `manifest.yaml -> strategy_config`. *Tunable* marks the fields a
@@ -19,7 +19,7 @@ through a new version (one variable per version).
 | `bias_ema_period` | 20 | 10 – 50 | 1H bars | no | EMA whose slope defines the 1H bias |
 | `bias_flat_slope_pct` | 0.05 | 0.01 – 0.20 | % | no | abs(slope) below this counts as flat |
 | `session_windows` | 07:00-10:00, 13:30-16:30 | list of HH:MM-HH:MM UTC, 1–3 windows | UTC | no | Entry windows; start inclusive, end exclusive |
-| `enable_signal_a` | True | true / false | - | no | VWAP reversion on/off |
+| `enable_signal_a` | False | true / false | - | no | VWAP reversion on/off (off in v0.4 to isolate Signal B) |
 | `vwap_anchor` | utc_day | utc_day | - | no | Session VWAP reset point (only utc_day implemented in v0.1) |
 | `vwap_trigger_sigma` | 1.5 | 1.0 – 3.0 | σ | no | Distance from VWAP that arms Signal A |
 | `vwap_limit_sigma` | 1.0 | 0.5 – trigger | σ | no | Entry limit band (worst acceptable entry) |
@@ -49,6 +49,7 @@ through a new version (one variable per version).
 | `backtest_days` | 90 | 30 – 180 | days | yes | Replay window length |
 | `warmup_days` | 5 | 3 – 10 | days | no | Extra history fetched for indicator warm-up (excluded from the replay window) |
 | `max_backtest_symbols` | 4 | 1 – 7 | symbols | yes | Symbols replayed per sandbox run (180 s budget); the rest are reported as skipped |
+| `backtest_end_utc` | 2026-11-09T17:15:00+00:00 | ISO-8601 UTC or empty (= now) | timestamp | no | Pinned evaluation end so versions replay identical bars; move only with a new baseline |
 
 ## Derived values (not configurable)
 

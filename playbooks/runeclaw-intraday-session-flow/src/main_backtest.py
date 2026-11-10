@@ -205,6 +205,11 @@ def run() -> None:
 
     now = datetime.now(UTC).replace(second=0, microsecond=0)
     end = now - timedelta(minutes=now.minute % 15)
+    if params.backtest_end_utc:
+        pinned = datetime.fromisoformat(params.backtest_end_utc.replace("Z", "+00:00"))
+        if pinned.tzinfo is None:
+            pinned = pinned.replace(tzinfo=UTC)
+        end = min(end, pinned)   # same bars for every version evaluated against this baseline
     start = end - timedelta(days=params.backtest_days + params.warmup_days)
     replay_start = start + timedelta(days=params.warmup_days)
 

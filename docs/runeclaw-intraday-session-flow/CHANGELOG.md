@@ -1,5 +1,19 @@
 # Changelog — RUNECLAW Intraday Session Flow
 
+## v0.4.0 — 2026-11-10
+Change:      enable_signal_a true → false. Signal A (VWAP reversion) is disabled for one
+             version; Signal B, regime filter, sessions, funding rule, risk limits and
+             exits are unchanged.
+Hypothesis:  Across v0.1–v0.3.1 stops (~60) outnumbered targets (~39) with ~30 time stops.
+             Signal A's geometry (entry 1.0σ, stop 2.0σ, target at VWAP) needs well above
+             50 % wins and got 46 %. Isolating Signal B attributes the loss to one engine.
+Baseline:    v0.3.1 run pbrun-16e2dea33de4 (RTs=149 PF=0.83 DD=11.4 %).
+Window:      pinned to the v0.3.1 window via backtest_end_utc = 2026-11-09T17:15Z,
+             last 90 days (+5 warm-up), BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT
+Mode:        backtest only — no live orders, no trade permissions, no paid data calls
+Result:      not yet run → verdict PENDING
+Decision:    run sandbox evaluation; report and stop for the owner's next decision
+
 ## v0.3.0 — 2026-11-09
 Change:      Funding rule in replay becomes direction-aware (as live): a position is
              flattened before the 00/08/16 UTC settlement only when it would PAY funding

@@ -36,7 +36,7 @@ def synthetic_15m(n_days: int = 12, seed: int = 7) -> pd.DataFrame:
 
 class FeatureTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.params = PlaybookParams()
+        self.params = PlaybookParams(enable_signal_a=True)  # Signal A tests exercise the rule even while v0.4 ships it off
         self.df = features.compute_features(synthetic_15m(), self.params)
 
     def test_columns_present(self) -> None:
@@ -108,6 +108,15 @@ class FeatureTests(unittest.TestCase):
         self.assertAlmostEqual(s.stop_price, 118.0)
         self.assertAlmostEqual(s.target_price, 124.0)  # 2R above mid
         self.assertEqual(s.expiry_minutes, 30)
+
+    def test_signal_a_off_by_default_in_v04(self) -> None:
+        row = {
+            "close": 110.0, "high": 110.5, "low": 109.0, "volume": 1.0,
+            "vwap_session": 100.0, "vwap_sigma": 5.0, "rsi": 75.0, "bias_slope_pct": 0.0,
+            "vol_median_prev": 10.0, "prior_high": 120.0, "prior_low": 90.0,
+        }
+        self.assertFalse(PlaybookParams().enable_signal_a)
+        self.assertEqual(features.detect_signals(row, PlaybookParams()), [])
 
     def test_regime_filter(self) -> None:
         self.assertEqual(features.regime_ok({"atr4h_pct": 0.3}, self.params), (False, "regime_chop"))
