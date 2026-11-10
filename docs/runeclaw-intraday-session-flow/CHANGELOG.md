@@ -1,5 +1,24 @@
 # Changelog — RUNECLAW Intraday Session Flow
 
+## v0.7 — 2026-11-10 — out-of-sample check (no strategy change, no new package version)
+Change:      None. v0.5.0 package exactly as merged (commit 3ec6949) replayed on the 90 days
+             immediately before the original window; only backtest_end_utc differs
+             (2026-08-11T17:15Z). Repository parameters are untouched (main still holds v0.6.0).
+Baseline:    in-sample v0.5.0 run pbrun-77fb5c12d8f8 (RTs=109 PF=1.07 DD=5.7 %, +21.8 USDT).
+Window:      2026-05-13 17:15 → 2026-08-11 17:15 UTC, BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT
+             (8,869 bars per symbol, 97 % coverage; run pbrun-d8b8abbb3a69, status completed)
+Mode:        backtest only — no live orders, no trade permissions, no paid data calls
+Result:      RTs=110 PF=0.59 (engine fill-based PF 1.09) DD=21.5 % of budget, win rate 47 %,
+             net −167.2 USDT, expectancy -0.30 R nominal (in-sample +0.04 R)
+             → FAIL on PF and DD.
+             Exits: stop 53, target 20, funding rate-unknown 34, time stop 2, daily cap 1.
+Defect:      the funding endpoint served only the latest ~90 days, so this window ran with
+             the conservative flatten-before-every-settlement fallback (34 exits) instead of
+             the direction-aware rule; the package's degraded flag did not catch it.
+             Estimated effect on PF ≈ 0.05 (v0.2 vs v0.3.1), not enough to explain the gap.
+Decision:    FAIL. The in-sample result did not generalise. Full write-up in OOS_v0.5.md.
+             No further version started; next step is the owner's choice.
+
 ## v0.6.0 — 2026-11-10
 Change:      TWO variables (owner-approved exception to the one-variable rule):
              signal_b_target_r 2.0 → 1.5 and volume_spike_mult 2.5 → 3.0.

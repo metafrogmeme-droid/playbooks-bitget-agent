@@ -6,13 +6,13 @@ specifications, parameter tables and evaluation policy live under `docs/`.
 
 | Playbook | Version | Market | Status |
 |---|---|---|---|
-| [`runeclaw-intraday-session-flow`](playbooks/runeclaw-intraday-session-flow/) | v0.6.0 | Bitget USDT-M perps passing the liquidity scan (BTC, ETH, SOL, XRP), 15m execution, Signal B only (3.0× volume, 1.5R target), 180 min time stop | v0.1–v0.3.1 FAIL (best PF 0.88, DD ≥ 11 %); v0.4 FAIL (PF 1.03, DD 5.9 %); v0.5 FAIL (PF 1.07, DD 5.7 %); v0.6 **FAIL** (PF 1.02, DD 5.8 %, +0.6 %); no live run |
+| [`runeclaw-intraday-session-flow`](playbooks/runeclaw-intraday-session-flow/) | v0.6.0 | Bitget USDT-M perps passing the liquidity scan (BTC, ETH, SOL, XRP), 15m execution, Signal B only (3.0× volume, 1.5R target), 180 min time stop | v0.1–v0.3.1 FAIL (best PF 0.88, DD ≥ 11 %); v0.4 FAIL (PF 1.03, DD 5.9 %); v0.5 FAIL (PF 1.07, DD 5.7 %); v0.6 **FAIL** (PF 1.02, DD 5.8 %, +0.6 %); v0.5 out-of-sample **FAIL** (PF 0.59, DD 21.5 %); no live run |
 
 ## Layout
 
 ```
 playbooks/<name>/            uploadable package (README, manifest.yaml, backtest.yaml, src/)
-docs/<name>/                 PARAMETERS.md, PSEUDOCODE.md, VERSIONING.md, CHANGELOG.md, PREFLIGHT.md, UNIVERSE.md
+docs/<name>/                 PARAMETERS.md, PSEUDOCODE.md, VERSIONING.md, CHANGELOG.md, PREFLIGHT.md, UNIVERSE.md, OOS_v0.5.md
 tools/check_package.py       mirror of the skill's static validator (+ repo consistency checks)
 tools/gen_params_table.py    regenerates PARAMETERS.md from src/params.py, checks manifest defaults
 tests/                       unit tests for the pure rule modules (features, risk)
