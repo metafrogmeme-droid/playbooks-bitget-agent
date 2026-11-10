@@ -9,8 +9,19 @@ Hypothesis:  In v0.4, 14 of 109 Signal B trades were closed by the two-hour time
 Baseline:    v0.4.0 run pbrun-3e8aac580d17 (RTs=109 PF=1.03 DD=5.9 %, +8.5 USDT).
 Window:      pinned (backtest_end_utc = 2026-11-09T17:15Z), BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT
 Mode:        backtest only — no live orders, no trade permissions, no paid data calls
-Result:      not yet run → verdict PENDING
-Decision:    run sandbox evaluation; report and stop for the owner's next decision
+Result:      run pbrun-77fb5c12d8f8 (platform status completed, 404 orders / 109 positions,
+             identical bars to v0.3.1 / v0.4: 8,869 per symbol).
+             RTs=109 PF=1.07 (engine fill-based PF 1.47) DD=5.7 % of budget, win rate 51 %,
+             net +21.8 USDT on 1,000 USDT, Sharpe 0.45 → FAIL on PF (≥ 1.3); DD criterion met.
+             Exits: stop 51, target 36, funding (pays) 13, time stop 9; 9 kept through funding.
+Effect:      vs v0.4 on the same bars: time stops 14 → 9; of the 5 freed trades 1 reached
+             target and 4 stopped out. PF 1.03 → 1.07, DD 5.9 % → 5.7 %, net +8.5 → +21.8 USDT.
+             A small improvement in the right direction; the time stop was not the binding
+             constraint. Stops (51) vs targets (36) at 2R remains the limiting ratio.
+Decision:    FAIL. Keep 180 min (better than 120 on every measured metric). Stopped for the
+             owner's decision. Candidates for v0.6 (one each): signal_b_target_r 2.0 → 1.5;
+             volume_spike_mult 2.5 → 3.0 (stricter breakout entry); Signal A back on with
+             vwap_trigger_sigma 2.0 as a separately measured version.
 
 ## v0.4.0 — 2026-11-10
 Change:      enable_signal_a true → false. Signal A (VWAP reversion) is disabled for one
