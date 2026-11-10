@@ -257,7 +257,8 @@ def detect_signals(row: Any, params: PlaybookParams) -> list[SignalCandidate]:
         mode = params.signal_b_entry_mode
         if mode not in ("close", "midpoint"):
             raise ValueError(f"unsupported signal_b_entry_mode={mode!r}; use 'close' or 'midpoint'")
-        # Entry limit price: the breakout bar's close (v0.8+) or its midpoint (v0.1-v0.6).
+        # Entry limit price: the breakout bar's midpoint (default) or its close
+        # (optional; tested as v0.8.0 and failed both windows).
         # The stop stays at the bar's opposite extreme, so R is measured from the entry.
         entry = close if mode == "close" else (high + low) / 2.0
         entry_tag = f"entry={mode}"

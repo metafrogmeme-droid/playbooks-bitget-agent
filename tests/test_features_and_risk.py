@@ -11,6 +11,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import yaml
 
 PKG = Path(__file__).resolve().parents[1] / "playbooks" / "runeclaw-intraday-session-flow"
 sys.path.insert(0, str(PKG))
@@ -101,10 +102,10 @@ class FeatureTests(unittest.TestCase):
             "vwap_session": 100.0, "vwap_sigma": 5.0, "rsi": 60.0, "bias_slope_pct": 0.2,
             "vol_median_prev": 10.0, "prior_high": 120.0, "prior_low": 90.0,
         }
-        sigs = features.detect_signals(row, self.params)
+        sigs = features.detect_signals(row, PlaybookParams(signal_b_entry_mode="close"))
         self.assertEqual([(s.kind, s.side) for s in sigs], [("B", "long")])
         s = sigs[0]
-        self.assertAlmostEqual(s.limit_price, 121.0)   # breakout bar close (v0.8)
+        self.assertAlmostEqual(s.limit_price, 121.0)   # breakout bar close (optional mode)
         self.assertAlmostEqual(s.stop_price, 118.0)    # opposite extreme, unchanged
         self.assertAlmostEqual(s.r_distance, 3.0)
         self.assertAlmostEqual(s.target_price, 127.0)  # 2R above the entry
@@ -116,11 +117,38 @@ class FeatureTests(unittest.TestCase):
             "vwap_session": 100.0, "vwap_sigma": 5.0, "rsi": 40.0, "bias_slope_pct": -0.2,
             "vol_median_prev": 10.0, "prior_high": 120.0, "prior_low": 90.0,
         }
-        s = features.detect_signals(row, self.params)[0]
+        s = features.detect_signals(row, PlaybookParams(signal_b_entry_mode="close"))[0]
         self.assertEqual((s.kind, s.side), ("B", "short"))
         self.assertAlmostEqual(s.limit_price, 89.0)
         self.assertAlmostEqual(s.stop_price, 92.0)
         self.assertAlmostEqual(s.target_price, 83.0)
+
+    def test_default_entry_mode_is_midpoint(self) -> None:
+        """The repository default must be the v0.5 behaviour, in code and in the manifest."""
+        defaults = PlaybookParams()
+        self.assertEqual(defaults.signal_b_entry_mode, "midpoint")
+        manifest = yaml.safe_load((PKG / "manifest.yaml").read_text(encoding="utf-8"))
+        cfg = manifest["strategy_config"]
+        self.assertEqual(cfg["signal_b_entry_mode"], "midpoint")
+        self.assertEqual(PlaybookParams.from_config(cfg).signal_b_entry_mode, "midpoint")
+        # the rest of the v0.5 parameter set
+        self.assertEqual((cfg["volume_spike_mult"], cfg["signal_b_target_r"], cfg["time_stop_minutes"], cfg["enable_signal_a"]),
+                         (2.5, 2.0, 180, False))
+        self.assertEqual((defaults.volume_spike_mult, defaults.signal_b_target_r, defaults.time_stop_minutes, defaults.enable_signal_a),
+                         (2.5, 2.0, 180, False))
+
+    def test_default_params_enter_at_midpoint(self) -> None:
+        row = {
+            "close": 121.0, "high": 122.0, "low": 118.0, "volume": 30.0,
+            "vwap_session": 100.0, "vwap_sigma": 5.0, "rsi": 60.0, "bias_slope_pct": 0.2,
+            "vol_median_prev": 10.0, "prior_high": 120.0, "prior_low": 90.0,
+        }
+        s = features.detect_signals(row, PlaybookParams())[0]   # no overrides at all
+        self.assertEqual((s.kind, s.side), ("B", "long"))
+        self.assertAlmostEqual(s.limit_price, 120.0)   # bar midpoint
+        self.assertAlmostEqual(s.stop_price, 118.0)
+        self.assertAlmostEqual(s.target_price, 124.0)  # 2R above the midpoint
+        self.assertIn("entry=midpoint", s.reasons)
 
     def test_signal_b_midpoint_mode_reproduces_v05(self) -> None:
         row = {

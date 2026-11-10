@@ -15,7 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, fields
 from typing import Any
 
-PLAYBOOK_VERSION = "0.8.0"
+PLAYBOOK_VERSION = "0.8.1"
 DECISION_INTERVAL_MINUTES = 15  # 15m execution bars and 15m live cadence
 
 
@@ -56,12 +56,14 @@ class PlaybookParams:
     signal_a_expiry_minutes: int = 45
     # --- Signal B: volume-spike breakout ----------------------------------
     enable_signal_b: bool = True
-    volume_spike_mult: float = 2.5     # v0.8 baseline = v0.5 value (v0.6 tried 3.0)
+    volume_spike_mult: float = 2.5     # v0.5 value (v0.6 tried 3.0, not adopted)
     volume_median_bars: int = 20
     breakout_lookback_bars: int = 20
-    signal_b_entry_mode: str = "close"  # v0.8: limit at breakout bar close ("midpoint" before)
+    # Entry limit price for Signal B. "midpoint" is the default (v0.5 behaviour).
+    # "close" (tested as v0.8.0) stays available but failed both evaluation windows.
+    signal_b_entry_mode: str = "midpoint"
     signal_b_expiry_minutes: int = 30
-    signal_b_target_r: float = 2.0     # v0.8 baseline = v0.5 value (v0.6 tried 1.5)
+    signal_b_target_r: float = 2.0     # v0.5 value (v0.6 tried 1.5, not adopted)
     signal_b_trail_r: float = 1.0
     # --- funding rule ------------------------------------------------------
     funding_hours_utc: tuple[int, ...] = (0, 8, 16)

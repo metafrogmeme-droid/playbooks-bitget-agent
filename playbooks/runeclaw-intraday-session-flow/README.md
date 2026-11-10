@@ -1,4 +1,4 @@
-# RUNECLAW Intraday Session Flow (v0.8)
+# RUNECLAW Intraday Session Flow (v0.8.1)
 
 Day-trading Playbook for the most liquid Bitget USDT-M perpetuals. The universe
 is every contract that passed the liquidity scan (24h volume ≥ 200M USDT,
@@ -31,7 +31,9 @@ too wild is event risk; both are skipped).
 * **Signal B, volume-spike breakout (trend).** When a bar prints at least 2.5×
   the 20-bar median volume, closes beyond the prior 20-bar high/low, and the 1H
   bias points the same way, a limit order is placed at the breakout bar's
-  close and expires after 30 minutes (the bar's midpoint was used before v0.8).
+  midpoint and expires after 30 minutes. Entering at the bar's close is
+  available as `signal_b_entry_mode: close`; it was tested as v0.8.0 and failed
+  both evaluation windows, so it is not the default.
 
 Position size risks 0.5 % of the margin budget between entry and stop. At most
 two positions are open at once and at most three trades per symbol per day.
