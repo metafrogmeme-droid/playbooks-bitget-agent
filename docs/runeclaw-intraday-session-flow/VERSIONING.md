@@ -1,6 +1,6 @@
 # Versioning & evaluation policy
 
-**Current version: v0.6.0** (`src/params.py::PLAYBOOK_VERSION`, `manifest.yaml::version`).
+**Current version: v0.8.0** (`src/params.py::PLAYBOOK_VERSION`, `manifest.yaml::version`).
 
 ## Rules
 
@@ -46,6 +46,7 @@
 | v0.5 | `time_stop_minutes` 120 → 180 | v0.4: Signal B alone break-even (PF 1.03, DD 5.9 %); 14 of 109 trades cut by the time stop |
 | v0.6 | `signal_b_target_r` 2.0 → 1.5 **and** `volume_spike_mult` 2.5 → 3.0 (owner-approved two-variable exception) | v0.5: PF 1.07, DD 5.7 %; stops 51 vs targets 36 is the limiting ratio |
 | v0.7 | out-of-sample check of v0.5 parameters on the preceding 90 days (no strategy change) | done: FAIL, PF 0.59, DD 21.5 % — see OOS_v0.5.md |
+| v0.8 | Signal B entry: limit at breakout bar midpoint → limit at breakout bar close, on v0.5 parameters; evaluated in-sample and out-of-sample | tests whether the midpoint pullback entry selects failing breakouts |
 
 ## Changelog entry template
 
