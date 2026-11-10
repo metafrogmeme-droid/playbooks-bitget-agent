@@ -1,5 +1,15 @@
 # Changelog — RUNECLAW Intraday Session Flow
 
+## v0.10.0 — 2026-11-10 — offline research: Signal C, session opening-range breakout
+Change:      New signal, off by default (enable_signal_c: false). Default behaviour is
+             unchanged (v0.5 configuration).
+Spec:        Fixed before any run, no parameter search: opening range = first 60 min of each
+             session; entry on the first 15m close outside it (limit at that close, 30 min
+             expiry); 1H bias not against; stop at the opposite side of the range; target 1 R.
+Evaluation:  local replay, public data, same costs; one run on each of three 90-day windows.
+Rule:        eligible as a default only if it passes the bar on all three windows.
+Result:      pending
+
 ## v0.9.0 — 2026-11-10 — offline research: cost-aware stop-distance filter (not adopted)
 Change:      New opt-in option signal_b_min_r_pct (default 0 = off). Default behaviour is
              unchanged and replays identically to v0.5. Adds an offline research harness

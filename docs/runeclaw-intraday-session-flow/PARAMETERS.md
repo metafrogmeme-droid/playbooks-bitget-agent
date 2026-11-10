@@ -1,4 +1,4 @@
-# Parameter table — RUNECLAW Intraday Session Flow v0.9
+# Parameter table — RUNECLAW Intraday Session Flow v0.10
 
 Generated from `src/params.py` by `tools/gen_params_table.py`; defaults are
 identical in `manifest.yaml -> strategy_config`. *Tunable* marks the fields a
@@ -37,6 +37,10 @@ through a new version (one variable per version).
 | `signal_b_expiry_minutes` | 30 | 15 – 60 | min | no | Resting time of a Signal B limit order |
 | `signal_b_target_r` | 2.0 | 1.0 – 4.0 | R | no | Breakout target as multiple of initial risk |
 | `signal_b_trail_r` | 1.0 | 0.5 – 2.0 | R | no | Trail distance once trade is that many R in profit |
+| `enable_signal_c` | False | true / false | - | no | Session opening-range breakout on/off (research option, off by default) |
+| `signal_c_range_minutes` | 60 | 30 – 120 | min | no | Length of the opening range at the start of each session window |
+| `signal_c_target_r` | 1.0 | 0.5 – 3.0 | R | no | Signal C target as multiple of risk (entry to opposite side of the range) |
+| `signal_c_expiry_minutes` | 30 | 15 – 60 | min | no | Resting time of a Signal C limit order |
 | `funding_hours_utc` | 0, 8, 16 | subset of {0, 8, 16} | hour UTC | no | Bitget 8-hour funding settlement times |
 | `funding_flatten_lead_minutes` | 10 | 5 – 30 | min | no | Flatten lead before funding; effective lead = max(lead, 15) at 15m cadence |
 | `funding_direction_aware` | True | true / false | - | no | Live: flatten only when the position pays funding (replay: always flatten) |

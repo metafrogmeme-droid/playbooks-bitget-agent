@@ -195,6 +195,101 @@ class FeatureTests(unittest.TestCase):
         self.assertEqual(features.regime_ok({"atr4h_pct": float("nan")}, self.params), (False, "regime_unavailable"))
 
 
+class SignalCTests(unittest.TestCase):
+    """Session opening-range breakout (research option, off by default)."""
+
+    ROW = {
+        "close": 101.5, "high": 101.8, "low": 100.9, "volume": 5.0,
+        "vwap_session": 100.0, "vwap_sigma": 5.0, "rsi": 55.0, "bias_slope_pct": 0.0,
+        "vol_median_prev": 10.0, "prior_high": 200.0, "prior_low": 0.0,
+        "or_high": 101.0, "or_low": 99.0, "or_first_break": 1.0,
+    }
+
+    def test_signal_c_is_off_by_default(self) -> None:
+        self.assertFalse(PlaybookParams().enable_signal_c)
+        manifest = yaml.safe_load((PKG / "manifest.yaml").read_text(encoding="utf-8"))
+        cfg = manifest["strategy_config"]
+        self.assertIs(cfg["enable_signal_c"], False)
+        self.assertEqual((cfg["signal_c_range_minutes"], cfg["signal_c_target_r"], cfg["signal_c_expiry_minutes"]), (60, 1.0, 30))
+        # a valid opening-range break produces nothing under the default configuration
+        self.assertEqual(features.detect_signals(self.ROW, PlaybookParams()), [])
+
+    def test_signal_c_long_geometry(self) -> None:
+        p = PlaybookParams(enable_signal_c=True, enable_signal_b=False)
+        sigs = features.detect_signals(self.ROW, p)
+        self.assertEqual([(s.kind, s.side) for s in sigs], [("C", "long")])
+        s = sigs[0]
+        self.assertAlmostEqual(s.limit_price, 101.5)   # close of the first bar outside the range
+        self.assertAlmostEqual(s.stop_price, 99.0)     # opposite side of the opening range
+        self.assertAlmostEqual(s.r_distance, 2.5)
+        self.assertAlmostEqual(s.target_price, 104.0)  # 1R beyond the entry
+        self.assertEqual(s.expiry_minutes, 30)
+
+    def test_signal_c_short_geometry_and_bias_gate(self) -> None:
+        p = PlaybookParams(enable_signal_c=True, enable_signal_b=False)
+        short = dict(self.ROW, close=98.6, high=99.2, low=98.4, or_first_break=-1.0)
+        s = features.detect_signals(short, p)[0]
+        self.assertEqual((s.kind, s.side), ("C", "short"))
+        self.assertAlmostEqual(s.stop_price, 101.0)
+        self.assertAlmostEqual(s.target_price, 98.6 - 2.4)
+        # the 1H bias must not point against the breakout
+        self.assertEqual(features.detect_signals(dict(self.ROW, bias_slope_pct=-0.5), p), [])      # long vs down bias
+        self.assertEqual(features.detect_signals(dict(short, bias_slope_pct=0.5), p), [])           # short vs up bias
+        self.assertEqual(len(features.detect_signals(dict(self.ROW, bias_slope_pct=0.5), p)), 1)    # long with up bias
+        # no break flag, or no completed range -> nothing
+        self.assertEqual(features.detect_signals(dict(self.ROW, or_first_break=0.0), p), [])
+        self.assertEqual(features.detect_signals(dict(self.ROW, or_high=float("nan")), p), [])
+
+    def _bars(self, rows):
+        """rows: (HH:MM, high, low, close) on 2026-03-02."""
+        return [(pd.Timestamp(f"2026-03-02 {t}", tz="UTC"), h, l, c) for t, h, l, c in rows]
+
+    def test_opening_range_tracker(self) -> None:
+        tr = features.OpeningRange(PlaybookParams())
+        out = {}
+        for ts, h, l, c in self._bars([
+            ("06:45", 100.5, 99.5, 100.0),   # before the session
+            ("07:00", 100.8, 99.9, 100.2), ("07:15", 101.0, 100.0, 100.6), ("07:30", 100.9, 99.0, 99.8), ("07:45", 100.4, 99.6, 100.1),
+            ("08:00", 100.9, 100.0, 100.7),  # inside the range
+            ("08:15", 101.6, 100.6, 101.4),  # first close above the range high
+            ("08:30", 102.0, 101.2, 101.9),  # still above: not a second signal
+            ("08:45", 99.5, 98.0, 98.5),     # below the range, but the session already broke
+            ("10:00", 100.0, 99.0, 99.5),    # session over
+            ("13:30", 99.0, 98.0, 98.4), ("13:45", 98.9, 97.8, 98.0), ("14:00", 98.6, 97.5, 98.1), ("14:15", 98.7, 97.9, 98.3),
+            ("14:30", 98.0, 97.0, 97.2),     # first close below the US range low
+        ]):
+            out[ts.strftime("%H:%M")] = tr.update(ts, h, l, c)
+        nan_rows = ("06:45", "07:00", "07:15", "07:30", "07:45", "10:00", "13:30", "14:15")
+        for key in nan_rows:
+            self.assertTrue(np.isnan(out[key][0]) and out[key][2] == 0.0, key)
+        self.assertEqual(out["08:00"], (101.0, 99.0, 0.0))
+        self.assertEqual(out["08:15"], (101.0, 99.0, 1.0))
+        self.assertEqual(out["08:30"], (101.0, 99.0, 0.0))
+        self.assertEqual(out["08:45"], (101.0, 99.0, 0.0))
+        self.assertEqual(out["14:30"], (99.0, 97.5, -1.0))
+
+    def test_opening_range_needs_every_range_bar(self) -> None:
+        tr = features.OpeningRange(PlaybookParams())
+        last = None
+        for ts, h, l, c in self._bars([
+            ("07:00", 100.8, 99.9, 100.2), ("07:30", 100.9, 99.0, 99.8), ("07:45", 100.4, 99.6, 100.1),   # 07:15 missing
+            ("08:00", 105.0, 104.0, 104.5),
+        ]):
+            last = tr.update(ts, h, l, c)
+        self.assertTrue(np.isnan(last[0]) and last[2] == 0.0)
+
+    def test_opening_range_columns_in_feature_frame(self) -> None:
+        df = features.compute_features(synthetic_15m(), PlaybookParams())
+        day = df.loc["2026-01-10"]
+        rng = day.loc["2026-01-10 07:00":"2026-01-10 07:45"]
+        post = day.loc["2026-01-10 08:00":"2026-01-10 09:45"]
+        self.assertTrue(rng["or_high"].isna().all())
+        self.assertTrue((post["or_high"] == rng["high"].max()).all())
+        self.assertTrue((post["or_low"] == rng["low"].min()).all())
+        self.assertLessEqual(int((post["or_first_break"] != 0).sum()), 1)   # at most one break per session
+        self.assertTrue(day.loc["2026-01-10 10:00":"2026-01-10 13:15"]["or_high"].isna().all())
+
+
 class RiskTests(unittest.TestCase):
     def setUp(self) -> None:
         self.params = PlaybookParams()

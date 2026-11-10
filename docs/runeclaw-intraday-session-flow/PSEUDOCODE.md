@@ -1,4 +1,4 @@
-# RUNECLAW Intraday Session Flow — rule pseudo-code (v0.9)
+# RUNECLAW Intraday Session Flow — rule pseudo-code (v0.10)
 
 All times UTC. `now` is the close time of the last completed 15-minute bar
 (replay) or the wall clock at the scheduled run (live, every 15 minutes).
@@ -124,6 +124,18 @@ Because the stop stays at the bar's opposite extreme, R is larger with the close
 (for a bar closing near its high, roughly double the midpoint R), so position size is
 smaller for the same risk and the target sits further away in price terms.
 If A and B fire on the same bar, B (trend) is taken.
+
+## 6b. Signal C — session opening-range breakout (research option, off by default)
+
+```
+range    = high/low of the bars opening in the first signal_c_range_minutes (60) of a session window
+           (not used if any of those bars is missing)
+trigger  = first later bar of that session with close > range_high (long) or close < range_low (short)
+LONG  if trigger up   and bias ∈ {up, flat}:   limit = close ; stop = range_low  ; R = close − range_low
+SHORT if trigger down and bias ∈ {down, flat}: limit = close ; stop = range_high ; R = range_high − close
+target = entry ± signal_c_target_r (1.0) · R ; expiry = signal_c_expiry_minutes (30) ; no trailing
+```
+One attempt per symbol per session: if the trigger bar is blocked by a gate, the session is skipped.
 
 ## 7. Sizing (risk.size_from_risk) and order placement
 
