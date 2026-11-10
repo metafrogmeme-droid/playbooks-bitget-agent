@@ -7,3 +7,5 @@ backtest_results/
 logs/
 .state/
 .env
+research/data/
+research/out/

@@ -15,7 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, fields
 from typing import Any
 
-PLAYBOOK_VERSION = "0.8.1"
+PLAYBOOK_VERSION = "0.9.0"
 DECISION_INTERVAL_MINUTES = 15  # 15m execution bars and 15m live cadence
 
 
@@ -62,6 +62,10 @@ class PlaybookParams:
     # Entry limit price for Signal B. "midpoint" is the default (v0.5 behaviour).
     # "close" (tested as v0.8.0) stays available but failed both evaluation windows.
     signal_b_entry_mode: str = "midpoint"
+    # Cost-aware filter (research, off by default): skip a Signal B entry when its stop
+    # distance is below this percentage of the entry price. Tight stops mean large
+    # notional per unit of risk, so fees consume a large share of R. 0 disables it.
+    signal_b_min_r_pct: float = 0.0
     signal_b_expiry_minutes: int = 30
     signal_b_target_r: float = 2.0     # v0.5 value (v0.6 tried 1.5, not adopted)
     signal_b_trail_r: float = 1.0
