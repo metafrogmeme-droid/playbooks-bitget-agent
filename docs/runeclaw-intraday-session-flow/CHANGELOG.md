@@ -1,5 +1,18 @@
 # Changelog — RUNECLAW Intraday Session Flow
 
+## v0.8.1 — 2026-11-10 — default restored (not a strategy version, no run)
+Change:      Repository default signal_b_entry_mode close → midpoint. With that default the
+             package behaves as v0.5.0 (2.5× volume, 2R target, 180 min time stop, Signal A
+             off, midpoint entry). signal_b_entry_mode: close remains available as an option.
+Why:         v0.8.0 (close entry) failed both evaluation windows but was merged, which left
+             the failing configuration as the default. The v0.8.0 results below stay on record.
+Evidence:    for this default, the existing v0.5 runs apply: in-sample pbrun-77fb5c12d8f8
+             (PF 1.07, DD 5.7 %, 109 RTs) and out-of-sample pbrun-d8b8abbb3a69 (PF 0.59,
+             DD 21.5 %, 110 RTs). Both FAIL the bar; nothing is cleared for live trading.
+Tests:       defaults pinned in tests (params default, manifest default, and midpoint
+             geometry); close mode still covered by its own tests.
+Decision:    no further strategy version until the owner decides.
+
 ## v0.8.0 — 2026-11-10
 Change:      Structural: Signal B entry limit price moves from the breakout bar's midpoint to
              the breakout bar's close (signal_b_entry_mode midpoint → close). Order type

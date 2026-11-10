@@ -1,6 +1,6 @@
 # Versioning & evaluation policy
 
-**Current version: v0.8.0** (`src/params.py::PLAYBOOK_VERSION`, `manifest.yaml::version`).
+**Current version: v0.8.1** — default configuration equals v0.5.0 behaviour (midpoint entry); no strategy version is in progress (`src/params.py::PLAYBOOK_VERSION`, `manifest.yaml::version`).
 
 ## Rules
 
@@ -47,6 +47,7 @@
 | v0.6 | `signal_b_target_r` 2.0 → 1.5 **and** `volume_spike_mult` 2.5 → 3.0 (owner-approved two-variable exception) | v0.5: PF 1.07, DD 5.7 %; stops 51 vs targets 36 is the limiting ratio |
 | v0.7 | out-of-sample check of v0.5 parameters on the preceding 90 days (no strategy change) | done: FAIL, PF 0.59, DD 21.5 % — see OOS_v0.5.md |
 | v0.8 | Signal B entry: limit at breakout bar midpoint → limit at breakout bar close, on v0.5 parameters; evaluated in-sample and out-of-sample | done: FAIL in both windows (in-sample PF 1.01, DD 10.4 %; out-of-sample PF 0.52, DD 21.2 %) |
+| v0.8.1 | repository default restored to `signal_b_entry_mode: midpoint` (v0.5 behaviour); `close` kept as an option | housekeeping, not a strategy version; no run |
 
 ## Changelog entry template
 

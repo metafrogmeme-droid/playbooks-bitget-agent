@@ -1,4 +1,4 @@
-# Parameter table — RUNECLAW Intraday Session Flow v0.8
+# Parameter table — RUNECLAW Intraday Session Flow v0.8.1
 
 Generated from `src/params.py` by `tools/gen_params_table.py`; defaults are
 identical in `manifest.yaml -> strategy_config`. *Tunable* marks the fields a
@@ -32,7 +32,7 @@ through a new version (one variable per version).
 | `volume_spike_mult` | 2.5 | 1.5 – 5.0 | × median | no | Bar volume vs median of previous bars |
 | `volume_median_bars` | 20 | 10 – 50 | 15m bars | no | Median window (current bar excluded) |
 | `breakout_lookback_bars` | 20 | 10 – 50 | 15m bars | no | Prior high/low window (current bar excluded) |
-| `signal_b_entry_mode` | close | close / midpoint | - | no | Signal B entry limit price: breakout bar close (v0.8+) or bar midpoint (v0.1–v0.6) |
+| `signal_b_entry_mode` | midpoint | midpoint / close | - | no | Signal B entry limit price: bar midpoint (default) or breakout bar close (optional; v0.8.0 test failed both windows) |
 | `signal_b_expiry_minutes` | 30 | 15 – 60 | min | no | Resting time of a Signal B limit order |
 | `signal_b_target_r` | 2.0 | 1.0 – 4.0 | R | no | Breakout target as multiple of initial risk |
 | `signal_b_trail_r` | 1.0 | 0.5 – 2.0 | R | no | Trail distance once trade is that many R in profit |
