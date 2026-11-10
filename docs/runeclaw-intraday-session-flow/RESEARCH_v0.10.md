@@ -48,4 +48,62 @@ Three windows of 90 days are a small sample.
 
 ## Results
 
-Pending — to be filled in after the three runs.
+The specification above was committed as `ff83307` before these runs. Each
+configuration was run once per window; nothing was adjusted afterwards.
+
+| Configuration | Window | Round-trips | Profit factor | Max DD (% budget) | Net USDT | Win rate | Expectancy (R) | PF before fees | Fees (R per trade) | Passes bar |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Default (Signal B, v0.5) | in-sample | 107 | 1.09 | 6.5 | +27.7 | 46 % | +0.05 | 1.57 | 0.23 | no |
+| Default (Signal B, v0.5) | out-of-sample | 110 | 0.79 | 12.1 | -75.4 | 45 % | -0.14 | 1.14 | 0.22 | no |
+| Default (Signal B, v0.5) | holdout | 145 | 0.89 | 15.5 | -47.1 | 45 % | -0.06 | 1.27 | 0.20 | no |
+| Signal C only | in-sample | 259 | 0.70 | 17.0 | -149.7 | 45 % | -0.11 | 1.02 | 0.12 | no |
+| Signal C only | out-of-sample | 231 | 0.65 | 18.4 | -148.7 | 42 % | -0.13 | 0.95 | 0.12 | no |
+| Signal C only | holdout | 259 | 0.83 | 9.6 | -76.3 | 46 % | -0.06 | 1.13 | 0.10 | no |
+
+"PF before fees" adds the estimated fees back to each trade. "Fees (R per trade)"
+is average fees divided by average planned risk.
+
+**Verdict: Signal C fails the bar on all three windows. It stays off by default and
+no parameter is changed.**
+
+Reading:
+
+* **The cost problem was solved, the edge was not there.** The stop is wider (median
+  0.75 % of price in-sample against 0.33 % for Signal B), so fees fall from about
+  0.2 R to about 0.1 R per trade, as intended. But before fees the profit factor is
+  about 1.0 on all three windows (1.02, 0.95, 1.13): the breakouts have no directional
+  edge to protect.
+* **Most trades never reach either exit.** In-sample only 115 of 259 trades end at the
+  target (71) or the stop (44). 96 are closed by the 180-minute time stop and 47 by
+  the funding rule, and both groups lose on balance. A full opening range is a long
+  way for price to travel inside a session.
+* **Consistent across windows.** Unlike Signal B, there is no window where Signal C
+  looks good, so this is not a case of an unlucky test window.
+* It is worse than the unchanged default on the in-sample and out-of-sample windows
+  and similar on the holdout. The default also fails all three.
+
+Checks made on the runs:
+
+* The default configuration replays identically to the runs made before Signal C
+  existed, on all three windows (same trades, fills, profit factor and drawdown).
+* All 260 in-sample Signal C entries were re-derived from the raw bars and match the
+  specification: full four-bar range, first close outside it, stop at the opposite
+  side, target 1 R from the entry.
+
+## Conclusion
+
+* Signal C is not adopted. `enable_signal_c` stays `false`; the default configuration
+  is the v0.5 behaviour.
+* Two independent breakout mechanisms (volume-spike bar and session opening range)
+  now show no usable edge after costs on this universe and timeframe over nine
+  months. Nothing is cleared for paper or live trading.
+* Per the pre-registration, no variant of Signal C (different range length, target or
+  stop) is tested here; doing so after seeing these results would be tuning.
+
+## Reproduce
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install nautilus_trader==1.231.0 pandas pyyaml
+.venv/bin/python research/fetch_data.py --start 2026-02-07T00:00 --end 2026-11-09T17:15
+.venv/bin/python research/study_signal_c.py     # prints the table above
+```
