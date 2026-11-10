@@ -1,5 +1,29 @@
 # Changelog — RUNECLAW Intraday Session Flow
 
+## v0.4.0 — 2026-11-10
+Change:      enable_signal_a true → false. Signal A (VWAP reversion) is disabled for one
+             version; Signal B, regime filter, sessions, funding rule, risk limits and
+             exits are unchanged.
+Hypothesis:  Across v0.1–v0.3.1 stops (~60) outnumbered targets (~39) with ~30 time stops.
+             Signal A's geometry (entry 1.0σ, stop 2.0σ, target at VWAP) needs well above
+             50 % wins and got 46 %. Isolating Signal B attributes the loss to one engine.
+Baseline:    v0.3.1 run pbrun-16e2dea33de4 (RTs=149 PF=0.83 DD=11.4 %).
+Window:      pinned to the v0.3.1 window via backtest_end_utc = 2026-11-09T17:15Z,
+             last 90 days (+5 warm-up), BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT
+Mode:        backtest only — no live orders, no trade permissions, no paid data calls
+Result:      run pbrun-3e8aac580d17 (platform status completed, 409 orders / 109 positions,
+             identical bars to v0.3.1: 8,869 per symbol, 2026-08-07 14:00 → 2026-11-09 17:00).
+             RTs=109 PF=1.03 (engine fill-based PF 1.44) DD=5.9 % of budget, win rate 50 %,
+             net +8.5 USDT on 1,000 USDT, Sharpe 0.18 → FAIL on PF (≥ 1.3); DD criterion met.
+             Exits: stop 47, target 35, time stop 14, funding (pays) 13; 8 kept through funding.
+Attribution: removing Signal A moved PF 0.83 → 1.03 and DD 11.4 % → 5.9 % on the same bars,
+             so the ~40 Signal A round-trips were the net-losing engine; Signal B alone is
+             roughly break-even after fees (47 stops vs 35 targets at 2R, 14 time stops).
+Decision:    FAIL. Stopped for the owner's decision. Candidates for v0.5 (one each):
+             signal_b_target_r 2.0 → 1.5; time_stop_minutes 120 → 180 (14 time stops cut
+             trades before 2R); re-enable Signal A with vwap_trigger_sigma 2.0 as a
+             separately measured version.
+
 ## v0.3.0 — 2026-11-09
 Change:      Funding rule in replay becomes direction-aware (as live): a position is
              flattened before the 00/08/16 UTC settlement only when it would PAY funding

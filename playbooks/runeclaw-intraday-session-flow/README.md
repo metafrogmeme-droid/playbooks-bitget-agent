@@ -1,4 +1,4 @@
-# RUNECLAW Intraday Session Flow (v0.3)
+# RUNECLAW Intraday Session Flow (v0.4)
 
 Day-trading Playbook for the most liquid Bitget USDT-M perpetuals. The universe
 is every contract that passed the liquidity scan (24h volume ≥ 200M USDT,
@@ -23,7 +23,8 @@ too wild is event risk; both are skipped).
 
 ## 开仓 / Entry
 
-* **Signal A, VWAP reversion (counter-trend).** When price is at least 1.5
+* **Signal A, VWAP reversion (counter-trend) — disabled in v0.4** (kept in the
+  code, `enable_signal_a: false`) to measure Signal B on its own. When enabled: when price is at least 1.5
   standard deviations from the session VWAP and RSI(14) is overbought (short)
   or oversold (long), and the 1H bias is flat or on the trade's side, a limit
   order is placed at the 1.0σ band and expires after 45 minutes.

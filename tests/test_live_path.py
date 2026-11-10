@@ -43,7 +43,7 @@ def ticker(volume=5e8, spread=1.0):
 
 class DecideTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.params = PlaybookParams()
+        self.params = PlaybookParams(enable_signal_a=True)  # exercise both signals regardless of the shipped default
         self.ledger = DailyLedger()
         self.ledger.roll(NOW)
         self.state = journal.empty_state()

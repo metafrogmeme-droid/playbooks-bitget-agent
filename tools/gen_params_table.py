@@ -32,7 +32,7 @@ SPEC: dict[str, tuple[str, str, bool, str]] = {
     "bias_ema_period": ("10 – 50", "1H bars", False, "EMA whose slope defines the 1H bias"),
     "bias_flat_slope_pct": ("0.01 – 0.20", "%", False, "abs(slope) below this counts as flat"),
     "session_windows": ("list of HH:MM-HH:MM UTC, 1–3 windows", "UTC", False, "Entry windows; start inclusive, end exclusive"),
-    "enable_signal_a": ("true / false", "-", False, "VWAP reversion on/off"),
+    "enable_signal_a": ("true / false", "-", False, "VWAP reversion on/off (off in v0.4 to isolate Signal B)"),
     "vwap_anchor": ("utc_day", "-", False, "Session VWAP reset point (only utc_day implemented in v0.1)"),
     "vwap_trigger_sigma": ("1.0 – 3.0", "σ", False, "Distance from VWAP that arms Signal A"),
     "vwap_limit_sigma": ("0.5 – trigger", "σ", False, "Entry limit band (worst acceptable entry)"),
@@ -62,6 +62,7 @@ SPEC: dict[str, tuple[str, str, bool, str]] = {
     "backtest_days": ("30 – 180", "days", True, "Replay window length"),
     "warmup_days": ("3 – 10", "days", False, "Extra history fetched for indicator warm-up (excluded from the replay window)"),
     "max_backtest_symbols": ("1 – 7", "symbols", True, "Symbols replayed per sandbox run (180 s budget); the rest are reported as skipped"),
+    "backtest_end_utc": ("ISO-8601 UTC or empty (= now)", "timestamp", False, "Pinned evaluation end so versions replay identical bars; move only with a new baseline"),
 }
 
 
@@ -104,7 +105,7 @@ def main(check_only: bool) -> int:
         return 1
 
     lines = [
-        "# Parameter table — RUNECLAW Intraday Session Flow v0.3",
+        "# Parameter table — RUNECLAW Intraday Session Flow v0.4",
         "",
         "Generated from `src/params.py` by `tools/gen_params_table.py`; defaults are",
         "identical in `manifest.yaml -> strategy_config`. *Tunable* marks the fields a",

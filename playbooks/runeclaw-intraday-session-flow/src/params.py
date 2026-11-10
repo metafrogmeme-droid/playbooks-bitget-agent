@@ -15,7 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, fields
 from typing import Any
 
-PLAYBOOK_VERSION = "0.3.1"
+PLAYBOOK_VERSION = "0.4.0"
 DECISION_INTERVAL_MINUTES = 15  # 15m execution bars and 15m live cadence
 
 
@@ -45,7 +45,7 @@ class PlaybookParams:
     # --- sessions (UTC) ----------------------------------------------------
     session_windows: tuple[str, ...] = ("07:00-10:00", "13:30-16:30")
     # --- Signal A: VWAP reversion -----------------------------------------
-    enable_signal_a: bool = True
+    enable_signal_a: bool = False      # v0.4: disabled for one version to isolate Signal B
     vwap_anchor: str = "utc_day"
     vwap_trigger_sigma: float = 1.5
     vwap_limit_sigma: float = 1.0
@@ -79,6 +79,9 @@ class PlaybookParams:
     backtest_days: int = 90
     warmup_days: int = 5
     max_backtest_symbols: int = 4   # 180 s sandbox budget: ~20 s data + replay per symbol
+    # Pinned evaluation end so successive versions replay the same bars; move it only
+    # when a new baseline window is adopted (record it in CHANGELOG.md).
+    backtest_end_utc: str = "2026-11-09T17:15:00+00:00"
 
     @classmethod
     def from_config(cls, cfg: dict[str, Any] | None) -> "PlaybookParams":
