@@ -12,7 +12,7 @@ specifications, parameter tables and evaluation policy live under `docs/`.
 
 ```
 playbooks/<name>/            uploadable package (README, manifest.yaml, backtest.yaml, src/)
-docs/<name>/                 PARAMETERS.md, PSEUDOCODE.md, VERSIONING.md, CHANGELOG.md, PREFLIGHT.md, UNIVERSE.md, OOS_v0.5.md
+docs/<name>/                 PARAMETERS.md, PSEUDOCODE.md, VERSIONING.md, CHANGELOG.md, PREFLIGHT.md, UNIVERSE.md, OOS_v0.5.md, CONFIRM_v0.8.1.md
 tools/check_package.py       mirror of the skill's static validator (+ repo consistency checks)
 tools/gen_params_table.py    regenerates PARAMETERS.md from src/params.py, checks manifest defaults
 tests/                       unit tests for the pure rule modules (features, risk)

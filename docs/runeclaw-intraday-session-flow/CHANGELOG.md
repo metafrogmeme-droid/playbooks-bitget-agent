@@ -1,5 +1,15 @@
 # Changelog — RUNECLAW Intraday Session Flow
 
+## 2026-11-10 — confirmation run of the restored default (no strategy change, no new version)
+Run:         pbrun-44028019082f — v0.8.1 package at main (d2b4375), in-sample window
+             2026-08-11 17:15 → 2026-11-09 17:15 UTC, historical replay only.
+Result:      identical to the original v0.5.0 run pbrun-77fb5c12d8f8 to the last digit:
+             RTs=109 PF=1.0664 DD=5.67 % net +21.83 USDT, 404 orders / 218 fills, exits
+             stop 51 / target 36 / funding 13 / time stop 9 → FAIL on PF, as before.
+Note:        funding coverage start slid from 2026-08-12 to 2026-08-13 (rolling ~90-day
+             endpoint). No trade was affected this time, but exact reproduction of the
+             in-sample numbers will degrade as the window ages. See CONFIRM_v0.8.1.md.
+
 ## v0.8.1 — 2026-11-10 — default restored (not a strategy version, no run)
 Change:      Repository default signal_b_entry_mode close → midpoint. With that default the
              package behaves as v0.5.0 (2.5× volume, 2R target, 180 min time stop, Signal A
