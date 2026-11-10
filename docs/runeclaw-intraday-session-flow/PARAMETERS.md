@@ -1,4 +1,4 @@
-# Parameter table — RUNECLAW Intraday Session Flow v0.5
+# Parameter table — RUNECLAW Intraday Session Flow v0.6
 
 Generated from `src/params.py` by `tools/gen_params_table.py`; defaults are
 identical in `manifest.yaml -> strategy_config`. *Tunable* marks the fields a
@@ -29,11 +29,11 @@ through a new version (one variable per version).
 | `rsi_oversold` | 30.0 | 15 – 40 | RSI | no | Long-side exhaustion threshold |
 | `signal_a_expiry_minutes` | 45 | 15 – 90 | min | no | Resting time of a Signal A limit order |
 | `enable_signal_b` | True | true / false | - | no | Volume-spike breakout on/off |
-| `volume_spike_mult` | 2.5 | 1.5 – 5.0 | × median | no | Bar volume vs median of previous bars |
+| `volume_spike_mult` | 3.0 | 1.5 – 5.0 | × median | no | Bar volume vs median of previous bars |
 | `volume_median_bars` | 20 | 10 – 50 | 15m bars | no | Median window (current bar excluded) |
 | `breakout_lookback_bars` | 20 | 10 – 50 | 15m bars | no | Prior high/low window (current bar excluded) |
 | `signal_b_expiry_minutes` | 30 | 15 – 60 | min | no | Resting time of a Signal B limit order |
-| `signal_b_target_r` | 2.0 | 1.0 – 4.0 | R | no | Breakout target as multiple of initial risk |
+| `signal_b_target_r` | 1.5 | 1.0 – 4.0 | R | no | Breakout target as multiple of initial risk |
 | `signal_b_trail_r` | 1.0 | 0.5 – 2.0 | R | no | Trail distance once trade is that many R in profit |
 | `funding_hours_utc` | 0, 8, 16 | subset of {0, 8, 16} | hour UTC | no | Bitget 8-hour funding settlement times |
 | `funding_flatten_lead_minutes` | 10 | 5 – 30 | min | no | Flatten lead before funding; effective lead = max(lead, 15) at 15m cadence |

@@ -1,5 +1,35 @@
 # Changelog — RUNECLAW Intraday Session Flow
 
+## v0.6.0 — 2026-11-10
+Change:      TWO variables (owner-approved exception to the one-variable rule):
+             signal_b_target_r 2.0 → 1.5 and volume_spike_mult 2.5 → 3.0.
+             Signal A stays disabled; time stop stays 180 min; everything else unchanged.
+Hypothesis:  v0.5 had 51 stops vs 36 targets at 2R. A nearer target should convert some
+             stops and time/funding exits into wins; a stricter volume threshold should
+             remove the weakest breakouts. Risks: smaller winners lower the payoff ratio,
+             and fewer signals may push round-trips toward the 60 minimum.
+Caveat:      With two changes the result cannot be attributed to either alone. If the
+             version passes or looks promising, a follow-up should isolate each change.
+Baseline:    v0.5.0 run pbrun-77fb5c12d8f8 (RTs=109 PF=1.07 DD=5.7 %, +21.8 USDT).
+Window:      pinned (backtest_end_utc = 2026-11-09T17:15Z), BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT
+Mode:        backtest only — no live orders, no trade permissions, no paid data calls
+Result:      run pbrun-a1ad37d733c6 (platform status completed, 377 orders / 102 positions,
+             identical bars to v0.5: 8,869 per symbol).
+             RTs=102 PF=1.02 (engine fill-based PF 1.45) DD=5.8 % of budget, win rate 58 %,
+             net +6.0 USDT on 1,000 USDT, Sharpe 0.16 → FAIL on PF (≥ 1.3); DD criterion met.
+             Exits: target 42, stop 40, funding (pays) 12, time stop 8; 6 kept through funding.
+Effect:      vs v0.5 on the same bars: win rate 51 % → 58 % and targets now outnumber stops
+             (42 vs 40, was 36 vs 51), but each winner is smaller, so PF fell 1.07 → 1.02 and
+             net +21.8 → +6.0 USDT. Round-trips fell only 109 → 102. Not attributable to
+             either change alone (two variables).
+Reading:     v0.4, v0.5 and v0.6 all land at PF 1.02–1.07 with DD 5.7–5.9 %. Parameter
+             changes move the win rate and payoff ratio against each other without lifting
+             expectancy: Signal B as specified is roughly break-even after fees on this window.
+Decision:    FAIL. Stopped for the owner's decision. Recommendation: do not adopt v0.6 as
+             the baseline (v0.5 is better on PF and net). Further threshold nudges on one
+             90-day window risk curve-fitting; the next step should be structural (entry
+             mechanics) or an out-of-sample check, not another target/threshold tweak.
+
 ## v0.5.0 — 2026-11-10
 Change:      time_stop_minutes 120 → 180. Signal A stays disabled; everything else unchanged.
 Hypothesis:  In v0.4, 14 of 109 Signal B trades were closed by the two-hour time stop before
