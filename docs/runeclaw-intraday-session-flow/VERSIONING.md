@@ -45,6 +45,7 @@
 | v0.4 | `enable_signal_a` true → false (isolate Signal B) | Attribute the loss to one engine |
 | v0.5 | `time_stop_minutes` 120 → 180 | v0.4: Signal B alone break-even (PF 1.03, DD 5.9 %); 14 of 109 trades cut by the time stop |
 | v0.6 | `signal_b_target_r` 2.0 → 1.5 **and** `volume_spike_mult` 2.5 → 3.0 (owner-approved two-variable exception) | v0.5: PF 1.07, DD 5.7 %; stops 51 vs targets 36 is the limiting ratio |
+| v0.7 | to be decided: out-of-sample window for v0.5 parameters, or a structural entry change for Signal B | v0.4–v0.6 cluster at PF 1.02–1.07; threshold tweaks are not lifting expectancy |
 
 ## Changelog entry template
 
