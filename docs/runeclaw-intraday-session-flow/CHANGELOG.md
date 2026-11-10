@@ -20,8 +20,28 @@ Windows:     in-sample 2026-08-11 17:15 → 2026-11-09 17:15 UTC;
              The out-of-sample window still runs with the funding fallback (no funding
              history served for it), exactly as its v0.5 baseline did.
 Mode:        backtest only — no live orders, no trade permissions, no paid data calls
-Result:      not yet run → verdict PENDING
-Decision:    run both sandbox evaluations; report and stop for the owner's next decision
+Result:      both runs completed on the same bars as their v0.5 baselines (8,869 per symbol).
+
+             |                          | In-sample            | Out-of-sample        |
+             | Run                      | pbrun-09cb4e435830   | pbrun-510927f72ccd   |
+             | v0.5 midpoint  PF/DD/RTs | 1.07 / 5.7 % / 109   | 0.59 / 21.5 % / 110  |
+             | v0.8 close     PF/DD/RTs | 1.01 / 10.4 % / 159  | 0.52 / 21.2 % / 136  |
+             | v0.8 win rate, net       | 55 %, +3.3 USDT      | 43 %, −186.4 USDT    |
+             | v0.8 expectancy (nominal)| +0.00 R              | −0.27 R              |
+             | Verdict                  | FAIL (PF and DD)     | FAIL (PF and DD)     |
+
+             v0.8 exits in-sample: stop 74, target 35, funding 28, time stop 22 (19 kept
+             through funding). Out-of-sample: stop 60, funding rate-unknown 41, time stop 18,
+             target 17.
+Reading:     The close entry fills far more often (159 vs 109 and 136 vs 110 round-trips),
+             so the midpoint limit was indeed skipping many breakouts. But the added trades
+             are not profitable: profit factor is slightly lower in both windows, and
+             in-sample drawdown rose from 5.7 % to 10.4 %, now failing that criterion too.
+             The adverse-selection hypothesis is not supported.
+Decision:    FAIL in both windows. Not recommended as a baseline. Parameter tuning
+             (v0.4–v0.6), an out-of-sample check (v0.7) and this structural entry change
+             have all failed the bar; Signal B has no demonstrated edge. Stopped for the
+             owner's decision.
 
 ## v0.7 — 2026-11-10 — out-of-sample check (no strategy change, no new package version)
 Change:      None. v0.5.0 package exactly as merged (commit 3ec6949) replayed on the 90 days
