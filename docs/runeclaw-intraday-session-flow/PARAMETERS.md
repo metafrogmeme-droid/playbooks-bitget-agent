@@ -1,4 +1,4 @@
-# Parameter table — RUNECLAW Intraday Session Flow v0.10
+# Parameter table — RUNECLAW Intraday Session Flow v0.11
 
 Generated from `src/params.py` by `tools/gen_params_table.py`; defaults are
 identical in `manifest.yaml -> strategy_config`. *Tunable* marks the fields a
@@ -41,6 +41,13 @@ through a new version (one variable per version).
 | `signal_c_range_minutes` | 60 | 30 – 120 | min | no | Length of the opening range at the start of each session window |
 | `signal_c_target_r` | 1.0 | 0.5 – 3.0 | R | no | Signal C target as multiple of risk (entry to opposite side of the range) |
 | `signal_c_expiry_minutes` | 30 | 15 – 60 | min | no | Resting time of a Signal C limit order |
+| `enable_signal_d` | False | true / false | - | no | Hourly trend persistence on/off (research option, off by default) |
+| `signal_d_lookback_hours` | 4 | 1 – 24 | hours | no | Signal D: completed hours over which the return must agree with the trigger hour |
+| `signal_d_body_atr` | 0.5 | 0.25 – 1.5 | x ATR(1H) | no | Signal D: minimum body of the trigger hour |
+| `signal_d_stop_atr` | 1.0 | 0.5 – 2.0 | x ATR(1H) | no | Signal D: stop distance from entry |
+| `signal_d_target_r` | 2.0 | 1.0 – 4.0 | R | no | Signal D: target as multiple of risk (exit is normally the time stop) |
+| `signal_d_atr_period` | 14 | 7 – 28 | 1H bars | no | Signal D: Wilder ATR period on completed hours |
+| `signal_d_expiry_minutes` | 30 | 15 – 60 | min | no | Resting time of a Signal D limit order |
 | `funding_hours_utc` | 0, 8, 16 | subset of {0, 8, 16} | hour UTC | no | Bitget 8-hour funding settlement times |
 | `funding_flatten_lead_minutes` | 10 | 5 – 30 | min | no | Flatten lead before funding; effective lead = max(lead, 15) at 15m cadence |
 | `funding_direction_aware` | True | true / false | - | no | Live: flatten only when the position pays funding (replay: always flatten) |

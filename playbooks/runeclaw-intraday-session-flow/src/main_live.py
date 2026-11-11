@@ -174,6 +174,8 @@ def decide(symbol: str, feats: pd.DataFrame | None, feed_status: str, ticker: di
     if not ok:
         return _hold(symbol, why, {"spread_bps": ticker.get("spread_bps"), "quote_volume_24h": ticker.get("quote_volume_24h")})
     candidates = features.detect_signals(row, params)
+    if any(c.kind == "D" for c in candidates) and not risk.hold_fits(now, params):
+        candidates = [c for c in candidates if c.kind != "D"]
     if not candidates:
         return _hold(symbol, "no_signal", {"rsi": row.get("rsi"), "bias_slope_pct": row.get("bias_slope_pct")})
     cand = sorted(candidates, key=lambda c: 0 if c.kind == "B" else 1)[0]   # trend signal takes priority

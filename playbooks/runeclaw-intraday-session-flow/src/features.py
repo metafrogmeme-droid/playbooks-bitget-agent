@@ -19,6 +19,10 @@ replay engine can read it row-by-row without look-ahead:
   window), available on later bars of that session once the range is complete.
 * ``or_first_break`` - +1 / -1 on the first bar of a session that closes above / below
   the opening range, 0 otherwise.
+* ``h1_closed`` - 1.0 on the 15m bar that completes a full clock hour, else 0.0. On
+  that bar ``h1_body`` (hour close - hour open), ``h1_atr`` (Wilder ATR of completed
+  1H bars) and ``h1_ret`` (return over the configured number of completed hours) are
+  set; on every other bar they are NaN.
 * ``notional_24h``   - rolling 24h traded notional (sum of close*volume over 96 bars),
   the replay proxy for the exchange 24h quote volume gate.
 """
@@ -48,6 +52,10 @@ FEATURE_COLUMNS: tuple[str, ...] = (
     "or_high",
     "or_low",
     "or_first_break",
+    "h1_closed",
+    "h1_body",
+    "h1_atr",
+    "h1_ret",
 )
 
 
@@ -168,7 +176,59 @@ def compute_features(df15: pd.DataFrame, params: PlaybookParams) -> pd.DataFrame
     df["or_high"] = [r[0] for r in rows]
     df["or_low"] = [r[1] for r in rows]
     df["or_first_break"] = [r[2] for r in rows]
+
+    # Hourly trend state: one state machine shared with IncrementalFeatures.
+    hourly = HourlyTrend(params)
+    hrows = [hourly.update(ts, o, h, l, c) for ts, o, h, l, c in
+             zip(df.index, df["open"].values, df["high"].values, df["low"].values, df["close"].values)]
+    df["h1_closed"] = [r[0] for r in hrows]
+    df["h1_body"] = [r[1] for r in hrows]
+    df["h1_atr"] = [r[2] for r in hrows]
+    df["h1_ret"] = [r[3] for r in hrows]
     return df
+
+
+class HourlyTrend:
+    """Causal tracker of completed clock-hour bars built from 15m bars.
+
+    ``update`` returns ``(h1_closed, h1_body, h1_atr, h1_ret)``. The last three are set
+    only on the 15m bar that completes an hour for which all four 15m bars were seen:
+    body = hour close - hour open, atr = Wilder ATR over completed hours, ret = hour
+    close / close ``signal_d_lookback_hours`` completed hours earlier - 1. ATR and ret
+    are NaN until enough completed hours exist.
+    """
+
+    BARS_PER_HOUR = 60 // BAR_MINUTES
+
+    def __init__(self, params: PlaybookParams) -> None:
+        self.lookback = max(1, int(params.signal_d_lookback_hours))
+        self.atr = _Wilder(int(params.signal_d_atr_period))
+        self.closes: deque = deque(maxlen=self.lookback + 1)
+        self.prev_close: float | None = None
+        self.key: tuple[int, int] | None = None
+        self.n = 0
+        self.o = self.h = self.l = float("nan")
+
+    def update(self, open_ts: Any, o: float, h: float, l: float, c: float) -> tuple[float, float, float, float]:
+        nan = float("nan")
+        key = (open_ts.toordinal(), open_ts.hour)
+        if key != self.key:
+            self.key, self.n, self.o, self.h, self.l = key, 0, o, h, l
+        self.n += 1
+        self.h = max(self.h, h)
+        self.l = min(self.l, l)
+        if open_ts.minute != 60 - BAR_MINUTES or self.n != self.BARS_PER_HOUR:
+            return 0.0, nan, nan, nan
+        # a full hour has just closed
+        if self.prev_close is None:
+            tr = self.h - self.l
+        else:
+            tr = max(self.h - self.l, abs(self.h - self.prev_close), abs(self.l - self.prev_close))
+        atr = self.atr.update(tr)
+        self.prev_close = c
+        self.closes.append(c)
+        ret = (c / self.closes[0] - 1.0) if len(self.closes) == self.closes.maxlen and self.closes[0] else nan
+        return 1.0, c - self.o, (atr if atr is not None else nan), ret
 
 
 class OpeningRange:
@@ -370,6 +430,29 @@ def detect_signals(row: Any, params: PlaybookParams) -> list[SignalCandidate]:
                         reasons=("first_close<opening_range_low", f"bias={bias}"),
                     )
                 )
+    # ---- Signal D: hourly trend persistence (research, off by default) ----------
+    if params.enable_signal_d and "h1_closed" in row and float(row["h1_closed"]) == 1.0 \
+            and _finite(row["h1_body"], row["h1_atr"], row["h1_ret"]) and float(row["h1_atr"]) > 0:
+        body, atr, ret = float(row["h1_body"]), float(row["h1_atr"]), float(row["h1_ret"])
+        r = params.signal_d_stop_atr * atr
+        strong = abs(body) >= params.signal_d_body_atr * atr
+        tag = (f"hour_body>={params.signal_d_body_atr}atr", f"ret_{params.signal_d_lookback_hours}h_same_sign")
+        if strong and body > 0 and ret > 0:
+            out.append(
+                SignalCandidate(
+                    kind="D", side="long", limit_price=close, stop_price=close - r,
+                    target_price=close + params.signal_d_target_r * r,
+                    expiry_minutes=params.signal_d_expiry_minutes, r_distance=r, reasons=tag,
+                )
+            )
+        elif strong and body < 0 and ret < 0:
+            out.append(
+                SignalCandidate(
+                    kind="D", side="short", limit_price=close, stop_price=close + r,
+                    target_price=close - params.signal_d_target_r * r,
+                    expiry_minutes=params.signal_d_expiry_minutes, r_distance=r, reasons=tag,
+                )
+            )
     return out
 
 
@@ -482,6 +565,7 @@ class IncrementalFeatures:
         self.notional: deque = deque(maxlen=BARS_PER_DAY)
         self.notional_sum = 0.0
         self.opening_range = OpeningRange(params)
+        self.hourly_trend = HourlyTrend(params)
 
     def _on_h1(self, bar: tuple) -> None:
         value = self.ema.update(bar[3])
@@ -562,6 +646,7 @@ class IncrementalFeatures:
             "prior_low": prior_low, "notional_24h": notional_24h,
         }
         row["or_high"], row["or_low"], row["or_first_break"] = self.opening_range.update(open_ts, h, l, c)
+        row["h1_closed"], row["h1_body"], row["h1_atr"], row["h1_ret"] = self.hourly_trend.update(open_ts, o, h, l, c)
         # push current bar into the "previous" windows for the next bar
         self.vols.append(v)
         self.highs.append(h)

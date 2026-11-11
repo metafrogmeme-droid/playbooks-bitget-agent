@@ -290,6 +290,84 @@ class SignalCTests(unittest.TestCase):
         self.assertTrue(day.loc["2026-01-10 10:00":"2026-01-10 13:15"]["or_high"].isna().all())
 
 
+class SignalDTests(unittest.TestCase):
+    """Hourly trend persistence (research option, off by default)."""
+
+    ROW = {
+        "close": 100.0, "high": 100.2, "low": 99.6, "volume": 5.0,
+        "vwap_session": 100.0, "vwap_sigma": 5.0, "rsi": 55.0, "bias_slope_pct": 0.0,
+        "vol_median_prev": 10.0, "prior_high": 200.0, "prior_low": 0.0,
+        "h1_closed": 1.0, "h1_body": 0.6, "h1_atr": 1.0, "h1_ret": 0.004,
+    }
+
+    def test_signal_d_is_off_by_default(self) -> None:
+        self.assertFalse(PlaybookParams().enable_signal_d)
+        cfg = yaml.safe_load((PKG / "manifest.yaml").read_text(encoding="utf-8"))["strategy_config"]
+        self.assertIs(cfg["enable_signal_d"], False)
+        self.assertEqual((cfg["signal_d_lookback_hours"], cfg["signal_d_body_atr"], cfg["signal_d_stop_atr"],
+                          cfg["signal_d_target_r"], cfg["signal_d_atr_period"], cfg["signal_d_expiry_minutes"]),
+                         (4, 0.5, 1.0, 2.0, 14, 30))
+        self.assertEqual(features.detect_signals(self.ROW, PlaybookParams()), [])
+
+    def test_signal_d_geometry_and_conditions(self) -> None:
+        p = PlaybookParams(enable_signal_d=True, enable_signal_b=False)
+        sigs = features.detect_signals(self.ROW, p)
+        self.assertEqual([(s.kind, s.side) for s in sigs], [("D", "long")])
+        s = sigs[0]
+        self.assertAlmostEqual(s.limit_price, 100.0)   # close of the bar that completes the hour
+        self.assertAlmostEqual(s.stop_price, 99.0)     # one ATR(1H) away
+        self.assertAlmostEqual(s.r_distance, 1.0)
+        self.assertAlmostEqual(s.target_price, 102.0)  # 2 R
+        self.assertEqual(s.expiry_minutes, 30)
+        short = features.detect_signals(dict(self.ROW, h1_body=-0.6, h1_ret=-0.004), p)[0]
+        self.assertEqual((short.side, short.stop_price, short.target_price), ("short", 101.0, 98.0))
+        # weak hour, disagreeing lookback return, not an hour close, ATR not ready -> nothing
+        self.assertEqual(features.detect_signals(dict(self.ROW, h1_body=0.49), p), [])
+        self.assertEqual(features.detect_signals(dict(self.ROW, h1_ret=-0.001), p), [])
+        self.assertEqual(features.detect_signals(dict(self.ROW, h1_closed=0.0), p), [])
+        self.assertEqual(features.detect_signals(dict(self.ROW, h1_atr=float("nan")), p), [])
+
+    def test_hourly_tracker_matches_pandas_on_completed_hours(self) -> None:
+        params = PlaybookParams(signal_d_lookback_hours=4)
+        df = synthetic_15m(n_days=4, seed=11)
+        tr = features.HourlyTrend(params)
+        out = [tr.update(ts, r.open, r.high, r.low, r.close) for ts, r in zip(df.index, df.itertuples())]
+        got = pd.DataFrame(out, index=df.index, columns=["closed", "body", "atr", "ret"])
+        # flag only on the bar that opens at minute 45
+        self.assertTrue(((got["closed"] == 1.0) == (df.index.minute == 45)).all())
+        self.assertTrue(got.loc[got["closed"] == 0.0, ["body", "atr", "ret"]].isna().all().all())
+        hourly = df.resample("1h", label="left", closed="left").agg({"open": "first", "high": "max", "low": "min", "close": "last"})
+        closed = got[got["closed"] == 1.0]
+        np.testing.assert_allclose(closed["body"].values, (hourly["close"] - hourly["open"]).values, rtol=1e-12, atol=1e-12)
+        want_atr = features.wilder_atr(hourly["high"], hourly["low"], hourly["close"], params.signal_d_atr_period).values
+        want_ret = (hourly["close"] / hourly["close"].shift(4) - 1.0).values
+        for name, want in (("atr", want_atr), ("ret", want_ret)):
+            have = closed[name].values
+            self.assertTrue((np.isnan(have) == np.isnan(want)).all(), name)
+            mask = ~np.isnan(want)
+            np.testing.assert_allclose(have[mask], want[mask], rtol=1e-9, atol=1e-12, err_msg=name)
+
+    def test_hourly_tracker_skips_incomplete_hours(self) -> None:
+        tr = features.HourlyTrend(PlaybookParams())
+        day = "2026-03-02"
+        seq = [("07:00", 1), ("07:15", 1), ("07:45", 0),            # 07:30 missing -> hour not counted
+               ("08:00", 0), ("08:15", 0), ("08:30", 0), ("08:45", 1)]
+        for t, _ in seq:
+            flag = tr.update(pd.Timestamp(f"{day} {t}", tz="UTC"), 100.0, 101.0, 99.0, 100.5)[0]
+            if t == "07:45":
+                self.assertEqual(flag, 0.0)
+            if t == "08:45":
+                self.assertEqual(flag, 1.0)
+
+    def test_hold_fits_gate(self) -> None:
+        p = PlaybookParams()   # 180-minute time stop, funding at 00/08/16 UTC, flat by 23:45
+        at = lambda h, m=0: datetime(2026, 3, 2, h, m, tzinfo=UTC)
+        for hour in (8, 9, 16, 17):
+            self.assertTrue(risk.hold_fits(at(hour), p), hour)
+        for hour in (7, 13, 14, 15, 21, 22):
+            self.assertFalse(risk.hold_fits(at(hour), p), hour)
+
+
 class RiskTests(unittest.TestCase):
     def setUp(self) -> None:
         self.params = PlaybookParams()

@@ -15,7 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, fields
 from typing import Any
 
-PLAYBOOK_VERSION = "0.10.0"
+PLAYBOOK_VERSION = "0.11.0"
 DECISION_INTERVAL_MINUTES = 15  # 15m execution bars and 15m live cadence
 
 
@@ -77,6 +77,19 @@ class PlaybookParams:
     signal_c_range_minutes: int = 60
     signal_c_target_r: float = 1.0
     signal_c_expiry_minutes: int = 30
+    # --- Signal D: hourly trend persistence (research, off by default) ------------
+    # At the close of a completed clock hour: if that hour's body is at least
+    # `signal_d_body_atr` x ATR(1H) and the return over the last `signal_d_lookback_hours`
+    # completed hours has the same sign, enter in that direction. Stop one ATR(1H) away,
+    # distant target, exit by the playbook time stop. Entered only when the full
+    # time-stop holding period fits before the next funding flatten and end of day.
+    enable_signal_d: bool = False
+    signal_d_lookback_hours: int = 4
+    signal_d_body_atr: float = 0.5
+    signal_d_stop_atr: float = 1.0
+    signal_d_target_r: float = 2.0
+    signal_d_atr_period: int = 14
+    signal_d_expiry_minutes: int = 30
     # --- funding rule ------------------------------------------------------
     funding_hours_utc: tuple[int, ...] = (0, 8, 16)
     funding_flatten_lead_minutes: int = 10

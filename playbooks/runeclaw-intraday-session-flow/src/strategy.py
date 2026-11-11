@@ -152,6 +152,9 @@ class RuneclawSessionFlow(Strategy):
             self._block(why)
             return
         candidates = features.detect_signals(row, params)
+        if any(c.kind == "D" for c in candidates) and not risk.hold_fits(now, params):
+            candidates = [c for c in candidates if c.kind != "D"]
+            self._block("signal_d_hold_does_not_fit")
         if not candidates:
             return
         cand = sorted(candidates, key=lambda c: 0 if c.kind == "B" else 1)[0]

@@ -1,5 +1,19 @@
 # Changelog — RUNECLAW Intraday Session Flow
 
+## v0.11.0 — 2026-11-11 — offline research: Signal D, hourly trend persistence
+Owner:       premise review accepted (null on the breakout line; one test of hourly trend
+             persistence; data split and kill criteria as written; constraints unchanged;
+             public/offline data only).
+Change:      New signal, off by default (enable_signal_d: false). Default behaviour unchanged.
+Spec:        Frozen before any run: at a completed clock hour whose body is ≥ 0.5 × ATR(1H)
+             and agrees with the return over the last L hours, enter at the close; stop
+             1 × ATR(1H); 2 R target, else the 180-minute time stop; entered only when the
+             full holding period fits before the funding and end-of-day flattens.
+             Declared variants: L = 1, 4, 12 hours.
+Evaluation:  staged per PREMISE_REVIEW.md: discovery 2023-01 → 2024-06, then validation,
+             final test and recent check only if the previous stage passes.
+Result:      pending
+
 ## 2026-11-10 — premise review (no code or parameter change, no new signal)
 Added:       PREMISE_REVIEW.md — what the evidence shows, the cost hurdle, candidate
              premises and who would pay for each, the data split for any future test, and

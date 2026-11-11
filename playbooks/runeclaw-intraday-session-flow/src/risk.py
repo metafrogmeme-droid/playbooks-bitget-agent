@@ -120,6 +120,14 @@ def minutes_to_eod_flatten(now: datetime, params: PlaybookParams) -> float:
     return (target - now).total_seconds() / 60.0
 
 
+def hold_fits(now: datetime, params: PlaybookParams) -> bool:
+    """True when a position opened now can run the full time-stop period without
+    being cut by the pre-funding flatten or the end-of-day flatten (Signal D gate)."""
+    need = params.time_stop_minutes
+    before_funding = minutes_to_next_funding(now, params) - params.effective_funding_lead_minutes
+    return before_funding >= need and minutes_to_eod_flatten(now, params) >= need
+
+
 def time_stop_due(opened_at: datetime, now: datetime, params: PlaybookParams) -> bool:
     return (now - opened_at).total_seconds() / 60.0 >= params.time_stop_minutes
 

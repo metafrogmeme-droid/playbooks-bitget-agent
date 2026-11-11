@@ -68,7 +68,7 @@ def load_funding(symbol: str) -> list[list[float]]:
     return [[int(t), float(r)] for t, r in zip(df["time_ms"], df["funding_rate"])]
 
 
-def make_instrument(spec: dict, venue: Venue) -> CryptoPerpetual:
+def make_instrument(spec: dict, venue: Venue, fee_mult: float = 1.0) -> CryptoPerpetual:
     sym = spec["raw_symbol"]
     return CryptoPerpetual(
         instrument_id=InstrumentId(Symbol(sym), venue),
@@ -83,13 +83,13 @@ def make_instrument(spec: dict, venue: Venue) -> CryptoPerpetual:
         size_increment=Quantity.from_str(str(spec["size_increment"])),
         ts_event=0,
         ts_init=0,
-        maker_fee=Decimal(str(spec["maker_fee"])),
-        taker_fee=Decimal(str(spec["taker_fee"])),
+        maker_fee=Decimal(str(spec["maker_fee"])) * Decimal(str(fee_mult)),
+        taker_fee=Decimal(str(spec["taker_fee"])) * Decimal(str(fee_mult)),
         min_quantity=Quantity.from_str(str(spec["lot_size"])),
     )
 
 
-def run(label: str, end: datetime, overrides: dict, days: int, sandbox_like_start: bool) -> dict:
+def run(label: str, end: datetime, overrides: dict, days: int, sandbox_like_start: bool, fee_mult: float = 1.0) -> dict:
     manifest = yaml.safe_load((PKG / "manifest.yaml").read_text(encoding="utf-8"))
     spec = yaml.safe_load((PKG / "backtest.yaml").read_text(encoding="utf-8"))
     cfg = dict(manifest["strategy_config"])
@@ -122,7 +122,7 @@ def run(label: str, end: datetime, overrides: dict, days: int, sandbox_like_star
         df = load_bars(symbol, data_start, end)
         if df.empty:
             continue
-        instrument = make_instrument(inst_spec, venue)
+        instrument = make_instrument(inst_spec, venue, fee_mult)
         engine.add_instrument(instrument)
         bar_type = BarType.from_str(inst_spec["bar_type"])
         engine.add_data(BarDataWrangler(bar_type, instrument).process(df))
@@ -172,6 +172,7 @@ def run(label: str, end: datetime, overrides: dict, days: int, sandbox_like_star
         "label": label,
         "window": [replay_start.isoformat(), end.isoformat()],
         "overrides": overrides,
+        "fee_mult": fee_mult,
         "round_trips": n,
         "profit_factor": (gp / gl) if gl > 0 else None,
         "max_drawdown_pct_of_budget": (dd_usdt / params.margin_budget * 100.0) if dd_usdt is not None else None,
@@ -202,12 +203,13 @@ def main() -> None:
     ap.add_argument("--days", type=int, default=90)
     ap.add_argument("--set", action="append", default=[], help="override strategy_config, e.g. --set time_stop_minutes=120")
     ap.add_argument("--full-warmup", action="store_true", help="use all warm-up bars instead of mirroring the sandbox data start")
+    ap.add_argument("--fee-mult", type=float, default=1.0, help="multiply maker and taker fees (cost stress test)")
     args = ap.parse_args()
     overrides = {}
     for item in args.set:
         key, value = item.split("=", 1)
         overrides[key] = yaml.safe_load(value)
-    result = run(args.label, _dt(args.end), overrides, args.days, not args.full_warmup)
+    result = run(args.label, _dt(args.end), overrides, args.days, not args.full_warmup, args.fee_mult)
     print(json.dumps({k: result[k] for k in ("label", "round_trips", "profit_factor", "max_drawdown_pct_of_budget", "net_pnl_usdt",
                                              "win_rate", "expectancy_nominal_r", "exit_reasons", "entries_placed", "entries_expired",
                                              "fills", "bars", "funding_rows")}, indent=1, default=str))
