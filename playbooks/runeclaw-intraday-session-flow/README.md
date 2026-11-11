@@ -1,5 +1,9 @@
 # RUNECLAW Intraday Session Flow (v0.11)
 
+> **Status: research concluded, not for trading.** No tested configuration passes the
+> evaluation bar after costs. The default below is kept as a reference only. See
+> `docs/runeclaw-intraday-session-flow/CONCLUSION.md` in the repository.
+
 Day-trading Playbook for the most liquid Bitget USDT-M perpetuals. The universe
 is every contract that passed the liquidity scan (24h volume ≥ 200M USDT,
 spread ≤ 3 bps): BTCUSDT, ETHUSDT, SOLUSDT and XRPUSDT by default, with the

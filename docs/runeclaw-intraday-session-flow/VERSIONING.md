@@ -1,5 +1,9 @@
 # Versioning & evaluation policy
 
+> **Programme status (2026-11-11): stopped.** Directional signal work is closed under the
+> current constraints by owner decision. See `CONCLUSION.md`. Reopening needs an explicit
+> owner decision and a new pre-registration under `PREMISE_REVIEW.md`.
+
 **Current version: v0.11.0** — default configuration equals v0.5.0 behaviour (midpoint entry, stop-distance filter off, Signals C and D off) (`src/params.py::PLAYBOOK_VERSION`, `manifest.yaml::version`).
 
 ## Rules
