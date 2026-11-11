@@ -74,4 +74,95 @@ not run, and this document records the negative result.
 
 ## Results
 
-Pending.
+The specification, variants and criteria above were committed as `e3b0f90` (study
+script `c70f7c2`) before these runs. Each variant was run once.
+
+### Stage 1 — discovery, 2023-01-01 → 2024-07-01 (18 months)
+
+| Run | Round-trips | Per 90 days | Profit factor | Max DD (% budget) | Net USDT | Win rate | Expectancy (R) | PF before fees | Fees (R per trade) |
+|---|---|---|---|---|---|---|---|---|---|
+| L = 1 h | 1025 | 169 | 0.70 | 82.3 | -788.2 | 35 % | -0.15 | 0.92 | 0.12 |
+| L = 4 h | 846 | 139 | 0.73 | 61.2 | -577.4 | 35 % | -0.14 | 0.96 | 0.12 |
+| L = 12 h | 749 | 123 | 0.78 | 45.3 | -417.8 | 37 % | -0.11 | 1.02 | 0.12 |
+
+| Stage-1 requirement | L = 1 h | L = 4 h | L = 12 h |
+|---|---|---|---|
+| PF after fees ≥ 1.4 | no (0.70) | no (0.73) | no (0.78) |
+| Profitable in at least 4 of 6 quarters | no (0 of 6) | no (0 of 6) | no (1 of 6) |
+| Profitable on at least 3 of 4 contracts | no (0) | no (0) | no (1) |
+| No quarter above half of net profit | not applicable, net is negative | not applicable | not applicable |
+| **Qualifies** | **no** | **no** | **no** |
+
+Net USDT by quarter (2023 Q1 → 2024 Q2):
+
+* L = 1 h: -76 / -122 / -128 / -190 / -50 / -222
+* L = 4 h: -62 / -84 / -89 / -155 / -40 / -147
+* L = 12 h: -39 / -23 / -53 / -124 / +5 / -184
+
+Net USDT by contract:
+
+* L = 1 h: BTC -433 (507 trades), ETH -327 (498 trades), SOL -15 (13 trades), XRP -13 (7 trades)
+* L = 4 h: BTC -331 (419 trades), ETH -232 (413 trades), SOL -0 (8 trades), XRP -13 (6 trades)
+* L = 12 h: BTC -239 (362 trades), ETH -176 (375 trades), SOL +10 (7 trades), XRP -12 (5 trades)
+
+**Verdict: no variant qualifies. Signal D is killed at stage 1.** Per the selection
+rule, validation, the final test and the recent check were not run, and no further
+variant will be tried.
+
+### Reading
+
+* **There is no persistence to harvest.** Before fees the profit factor is 0.92,
+  0.96 and 1.02. The trades that simply ran to the 180-minute time stop, which is the
+  purest measure of follow-through, averaged about zero before fees (+0.04, −0.01 and
+  0.00 USDT per trade). A strong hour that agrees with the recent trend told us
+  nothing about the next three hours.
+* **Costs then decide it.** With a stop one hourly ATR away (median 0.66–0.67 % of
+  price), fees are about 0.12 R per trade, as planned. On no edge, that gives
+  −0.11 to −0.15 R per trade.
+* **It is consistent.** Every quarter loses for L = 1 and L = 4; one quarter of six is
+  marginally positive for L = 12. BTC and ETH, with 360 to 510 trades each, lose under
+  every variant. This is not a borderline miss.
+* **Trade count was not the issue**: 123 to 169 round-trips per 90 days against the
+  60 required.
+* **Drawdown** over the 18 months was 45 % to 82 % of the 1,000 USDT budget.
+
+### A limitation noticed before the runs, and why it does not change the verdict
+
+In 2023, SOL and XRP averaged about 58M and 77M USDT of daily volume on Bitget, below
+the playbook's 200M volume gate, so they traded only 5 to 13 times each in discovery.
+The "3 of 4 contracts" requirement could therefore not have been met in a meaningful
+way in this period. It did not matter: the two contracts that did trade lose clearly,
+and the other requirements fail on their own. For any future discovery on this period
+the per-contract requirement should be restated by the owner.
+
+### Checks
+
+* The default configuration replays identically with the Signal D code present, on
+  all three 2026 windows.
+* The download has no gaps (138,213 bars per contract) and its 2026 portion is
+  identical to the data used for v0.9 and v0.10.
+* All 846 entries of the L = 4 run were re-derived from raw hourly bars: every one
+  satisfies the trigger and trend conditions and falls at 08:00, 09:00 or 16:00 UTC.
+  For 12 of them (SOL and XRP) the stop differs from the hand calculation by less
+  than one tick, because historical prices carry more decimals than today's tick.
+
+## Conclusion
+
+* Signal D is not adopted. `enable_signal_d` stays `false`; the default configuration
+  is the v0.5 behaviour. Nothing is cleared for paper or live trading.
+* Three mechanisms have now been tested against costs: a volume-spike breakout, a
+  session opening-range breakout and hourly trend persistence. None shows an edge.
+  The null hypothesis in the premise review stands: under the current constraints
+  (0.02 % / 0.06 % fees, flat by midnight, 180-minute time stop, four contracts)
+  there is no demonstrated intraday directional edge on public price data.
+* Recommendation: stop directional signal work under these constraints. The remaining
+  routes are the owner's policy calls recorded in the premise review: changing a
+  constraint, or admitting a data source for the liquidation and funding premises.
+
+## Reproduce
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install nautilus_trader==1.231.0 pandas pyyaml
+.venv/bin/python research/fetch_data.py --start 2022-12-01T00:00 --end 2026-11-09T17:15
+.venv/bin/python research/study_signal_d.py discovery
+```

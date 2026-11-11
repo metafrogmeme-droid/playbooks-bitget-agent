@@ -12,7 +12,14 @@ Spec:        Frozen before any run: at a completed clock hour whose body is ≥ 
              Declared variants: L = 1, 4, 12 hours.
 Evaluation:  staged per PREMISE_REVIEW.md: discovery 2023-01 → 2024-06, then validation,
              final test and recent check only if the previous stage passes.
-Result:      pending
+Result:      Stage 1 discovery, 2023-01 → 2024-06, one run per declared variant
+             (spec committed first as e3b0f90):
+             L = 1 h   1,025 RTs PF 0.70 net −788 USDT (PF before fees 0.92), 0 of 6 quarters profitable
+             L = 4 h     846 RTs PF 0.73 net −577 USDT (PF before fees 0.96), 0 of 6 quarters profitable
+             L = 12 h    749 RTs PF 0.78 net −418 USDT (PF before fees 1.02), 1 of 6 quarters profitable
+Verdict:     KILLED at stage 1 — no variant meets any discovery requirement. Stages 2–4 not run.
+Decision:    Signal D not adopted; default stays v0.5 behaviour. The null in the premise review
+             stands. No paper or live trading. See RESEARCH_v0.11.md.
 
 ## 2026-11-10 — premise review (no code or parameter change, no new signal)
 Added:       PREMISE_REVIEW.md — what the evidence shows, the cost hurdle, candidate

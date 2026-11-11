@@ -50,7 +50,7 @@
 | v0.8.1 | repository default restored to `signal_b_entry_mode: midpoint` (v0.5 behaviour); `close` kept as an option | housekeeping, not a strategy version; no run |
 | v0.9 | offline research: cost-aware minimum stop distance (`signal_b_min_r_pct`), three windows incl. a fresh holdout | done: passes in-sample, fails out-of-sample and holdout; not adopted — see RESEARCH_v0.9.md |
 | v0.10 | offline research: Signal C, session opening-range breakout; single pre-registered spec, three windows | done: fails all three windows (PF 0.70 / 0.65 / 0.83); not adopted — see RESEARCH_v0.10.md |
-| v0.11 | offline research: Signal D, hourly trend persistence; staged test per PREMISE_REVIEW.md | pending — see RESEARCH_v0.11.md |
+| v0.11 | offline research: Signal D, hourly trend persistence; staged test per PREMISE_REVIEW.md | done: killed at stage 1 (discovery PF 0.70 / 0.73 / 0.78, no edge before fees); not adopted — see RESEARCH_v0.11.md |
 
 No new signal is started before the owner has decided on `PREMISE_REVIEW.md`, which fixes the
 data split and kill criteria for any future idea.
