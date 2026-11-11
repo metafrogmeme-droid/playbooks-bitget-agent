@@ -15,7 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, fields
 from typing import Any
 
-PLAYBOOK_VERSION = "0.9.0"
+PLAYBOOK_VERSION = "0.10.0"
 DECISION_INTERVAL_MINUTES = 15  # 15m execution bars and 15m live cadence
 
 
@@ -69,6 +69,14 @@ class PlaybookParams:
     signal_b_expiry_minutes: int = 30
     signal_b_target_r: float = 2.0     # v0.5 value (v0.6 tried 1.5, not adopted)
     signal_b_trail_r: float = 1.0
+    # --- Signal C: session opening-range breakout (research, off by default) -------
+    # Range = high/low of the first `signal_c_range_minutes` of each session window.
+    # Entry on the first 15m close outside the range, limit at that close; stop at the
+    # opposite side of the range; fixed target; one attempt per symbol per session.
+    enable_signal_c: bool = False
+    signal_c_range_minutes: int = 60
+    signal_c_target_r: float = 1.0
+    signal_c_expiry_minutes: int = 30
     # --- funding rule ------------------------------------------------------
     funding_hours_utc: tuple[int, ...] = (0, 8, 16)
     funding_flatten_lead_minutes: int = 10

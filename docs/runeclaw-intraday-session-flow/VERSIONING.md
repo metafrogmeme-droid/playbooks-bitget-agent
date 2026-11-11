@@ -1,6 +1,6 @@
 # Versioning & evaluation policy
 
-**Current version: v0.9.0** — default configuration equals v0.5.0 behaviour (midpoint entry, stop-distance filter off); no strategy version is in progress (`src/params.py::PLAYBOOK_VERSION`, `manifest.yaml::version`).
+**Current version: v0.10.0** — default configuration equals v0.5.0 behaviour (midpoint entry, stop-distance filter off, Signal C off) (`src/params.py::PLAYBOOK_VERSION`, `manifest.yaml::version`).
 
 ## Rules
 
@@ -49,6 +49,10 @@
 | v0.8 | Signal B entry: limit at breakout bar midpoint → limit at breakout bar close, on v0.5 parameters; evaluated in-sample and out-of-sample | done: FAIL in both windows (in-sample PF 1.01, DD 10.4 %; out-of-sample PF 0.52, DD 21.2 %) |
 | v0.8.1 | repository default restored to `signal_b_entry_mode: midpoint` (v0.5 behaviour); `close` kept as an option | housekeeping, not a strategy version; no run |
 | v0.9 | offline research: cost-aware minimum stop distance (`signal_b_min_r_pct`), three windows incl. a fresh holdout | done: passes in-sample, fails out-of-sample and holdout; not adopted — see RESEARCH_v0.9.md |
+| v0.10 | offline research: Signal C, session opening-range breakout; single pre-registered spec, three windows | done: fails all three windows (PF 0.70 / 0.65 / 0.83); not adopted — see RESEARCH_v0.10.md |
+
+No new signal is started before the owner has decided on `PREMISE_REVIEW.md`, which fixes the
+data split and kill criteria for any future idea.
 
 ## Changelog entry template
 

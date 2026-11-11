@@ -15,6 +15,10 @@ replay engine can read it row-by-row without look-ahead:
 * ``atr4h_pct``      - Wilder ATR / close on completed 4H bars, in percent.
 * ``vol_median_prev``- median volume of the previous N bars (current bar excluded).
 * ``prior_high`` / ``prior_low`` - highest high / lowest low of the previous N bars.
+* ``or_high`` / ``or_low`` - session opening range (first N minutes of a session
+  window), available on later bars of that session once the range is complete.
+* ``or_first_break`` - +1 / -1 on the first bar of a session that closes above / below
+  the opening range, 0 otherwise.
 * ``notional_24h``   - rolling 24h traded notional (sum of close*volume over 96 bars),
   the replay proxy for the exchange 24h quote volume gate.
 """
@@ -41,6 +45,9 @@ FEATURE_COLUMNS: tuple[str, ...] = (
     "prior_high",
     "prior_low",
     "notional_24h",
+    "or_high",
+    "or_low",
+    "or_first_break",
 )
 
 
@@ -154,7 +161,59 @@ def compute_features(df15: pd.DataFrame, params: PlaybookParams) -> pd.DataFrame
     df["prior_high"] = df["high"].shift(1).rolling(n_brk, min_periods=n_brk).max()
     df["prior_low"] = df["low"].shift(1).rolling(n_brk, min_periods=n_brk).min()
     df["notional_24h"] = (df["close"] * df["volume"]).rolling(BARS_PER_DAY, min_periods=BARS_PER_DAY).sum()
+
+    # Session opening range: one state machine shared with IncrementalFeatures.
+    tracker = OpeningRange(params)
+    rows = [tracker.update(ts, h, l, c) for ts, h, l, c in zip(df.index, df["high"].values, df["low"].values, df["close"].values)]
+    df["or_high"] = [r[0] for r in rows]
+    df["or_low"] = [r[1] for r in rows]
+    df["or_first_break"] = [r[2] for r in rows]
     return df
+
+
+class OpeningRange:
+    """Causal opening-range tracker for the configured session windows.
+
+    For each window ``HH:MM-HH:MM`` the range is the high/low of the bars whose open
+    time lies in the first ``signal_c_range_minutes`` of the window. On later bars of
+    the same session it returns ``(or_high, or_low, first_break)``; ``first_break`` is
+    +1.0 / -1.0 only on the first bar that closes outside the range. If a range bar
+    is missing the range is not used that session. Outside those bars: (nan, nan, 0).
+    """
+
+    def __init__(self, params: PlaybookParams) -> None:
+        self.windows: list[tuple[int, int]] = []
+        for w in params.session_windows:
+            start, end = [part.strip() for part in w.split("-")]
+            sh, sm = start.split(":")
+            eh, em = end.split(":")
+            self.windows.append((int(sh) * 60 + int(sm), int(eh) * 60 + int(em)))
+        self.range_minutes = int(params.signal_c_range_minutes)
+        self.need = max(1, self.range_minutes // BAR_MINUTES)
+        self.state = [{"key": None, "n": 0, "hi": float("nan"), "lo": float("nan"), "broken": False} for _ in self.windows]
+
+    def update(self, open_ts: Any, high: float, low: float, close: float) -> tuple[float, float, float]:
+        tod = open_ts.hour * 60 + open_ts.minute
+        day = open_ts.toordinal()
+        nan = float("nan")
+        for i, (start, end) in enumerate(self.windows):
+            st = self.state[i]
+            if start <= tod < start + self.range_minutes:
+                if st["key"] != day:
+                    st.update(key=day, n=0, hi=high, lo=low, broken=False)
+                st["n"] += 1
+                st["hi"] = max(st["hi"], high)
+                st["lo"] = min(st["lo"], low)
+                return nan, nan, 0.0
+            if start + self.range_minutes <= tod < end and st["key"] == day and st["n"] == self.need:
+                first_break = 0.0
+                if not st["broken"]:
+                    if close > st["hi"]:
+                        first_break, st["broken"] = 1.0, True
+                    elif close < st["lo"]:
+                        first_break, st["broken"] = -1.0, True
+                return float(st["hi"]), float(st["lo"]), first_break
+        return nan, nan, 0.0
 
 
 @dataclass(frozen=True)
@@ -284,6 +343,33 @@ def detect_signals(row: Any, params: PlaybookParams) -> list[SignalCandidate]:
                         reasons=(f"vol>={params.volume_spike_mult}x_median", "close<prior_low", "bias=down", entry_tag),
                     )
                 )
+    # ---- Signal C: session opening-range breakout (research, off by default) ----
+    if params.enable_signal_c and "or_first_break" in row and _finite(row["or_high"], row["or_low"]) and float(row["or_first_break"]) != 0.0:
+        direction = float(row["or_first_break"])
+        or_high, or_low = float(row["or_high"]), float(row["or_low"])
+        # the 1H bias must not point against the breakout
+        if direction > 0 and bias in ("up", "flat"):
+            r = close - or_low
+            if r > 0:
+                out.append(
+                    SignalCandidate(
+                        kind="C", side="long", limit_price=close, stop_price=or_low,
+                        target_price=close + params.signal_c_target_r * r,
+                        expiry_minutes=params.signal_c_expiry_minutes, r_distance=r,
+                        reasons=("first_close>opening_range_high", f"bias={bias}"),
+                    )
+                )
+        elif direction < 0 and bias in ("down", "flat"):
+            r = or_high - close
+            if r > 0:
+                out.append(
+                    SignalCandidate(
+                        kind="C", side="short", limit_price=close, stop_price=or_high,
+                        target_price=close - params.signal_c_target_r * r,
+                        expiry_minutes=params.signal_c_expiry_minutes, r_distance=r,
+                        reasons=("first_close<opening_range_low", f"bias={bias}"),
+                    )
+                )
     return out
 
 
@@ -395,6 +481,7 @@ class IncrementalFeatures:
         self.lows: deque = deque(maxlen=params.breakout_lookback_bars)
         self.notional: deque = deque(maxlen=BARS_PER_DAY)
         self.notional_sum = 0.0
+        self.opening_range = OpeningRange(params)
 
     def _on_h1(self, bar: tuple) -> None:
         value = self.ema.update(bar[3])
@@ -474,6 +561,7 @@ class IncrementalFeatures:
             "atr4h_pct": atr_pct, "vol_median_prev": vol_median_prev, "prior_high": prior_high,
             "prior_low": prior_low, "notional_24h": notional_24h,
         }
+        row["or_high"], row["or_low"], row["or_first_break"] = self.opening_range.update(open_ts, h, l, c)
         # push current bar into the "previous" windows for the next bar
         self.vols.append(v)
         self.highs.append(h)

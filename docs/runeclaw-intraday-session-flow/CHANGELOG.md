@@ -1,5 +1,29 @@
 # Changelog — RUNECLAW Intraday Session Flow
 
+## 2026-11-10 — premise review (no code or parameter change, no new signal)
+Added:       PREMISE_REVIEW.md — what the evidence shows, the cost hurdle, candidate
+             premises and who would pay for each, the data split for any future test, and
+             kill criteria fixed in advance. No breakout variants will be tried.
+Measured:    the funding fallback used on older windows lowers Signal B's in-sample PF
+             from 1.09 to 0.94 and leaves Signal C unchanged (0.70 vs 0.71).
+Status:      waiting for the owner's decision; default configuration unchanged.
+
+## v0.10.0 — 2026-11-10 — offline research: Signal C, session opening-range breakout
+Change:      New signal, off by default (enable_signal_c: false). Default behaviour is
+             unchanged (v0.5 configuration).
+Spec:        Fixed before any run, no parameter search: opening range = first 60 min of each
+             session; entry on the first 15m close outside it (limit at that close, 30 min
+             expiry); 1H bias not against; stop at the opposite side of the range; target 1 R.
+Evaluation:  local replay, public data, same costs; one run on each of three 90-day windows.
+Rule:        eligible as a default only if it passes the bar on all three windows.
+Result:      Signal C only, one run per window (spec committed first as ff83307):
+             in-sample     259 RTs PF 0.70 DD 17.0 % net −149.7 USDT (PF before fees 1.02)
+             out-of-sample 231 RTs PF 0.65 DD 18.4 % net −148.7 USDT (PF before fees 0.95)
+             holdout       259 RTs PF 0.83 DD  9.6 % net  −76.3 USDT (PF before fees 1.13)
+             Fees fell to ~0.1 R per trade as intended, but there is no edge before fees.
+Verdict:     FAIL on all three windows → not adopted; no parameter adjusted after the fact.
+Decision:    Default stays v0.5 behaviour. No paper or live trading. See RESEARCH_v0.10.md.
+
 ## v0.9.0 — 2026-11-10 — offline research: cost-aware stop-distance filter (not adopted)
 Change:      New opt-in option signal_b_min_r_pct (default 0 = off). Default behaviour is
              unchanged and replays identically to v0.5. Adds an offline research harness

@@ -230,7 +230,7 @@ class RuneclawSessionFlow(Strategy):
                     trade["target"] = float(new_target)
                     self._log(trade["signal_id"], now, symbol, trade["side"], "target_modified", tp.client_order_id.value,
                               target=float(new_target), note="Signal A target follows session VWAP")
-        else:
+        elif trade["kind"] == "B":
             best = trade.get("best_excursion", trade["entry_price"])
             best = max(best, float(bar.high)) if trade["side"] == "long" else min(best, float(bar.low))
             trade["best_excursion"] = best
