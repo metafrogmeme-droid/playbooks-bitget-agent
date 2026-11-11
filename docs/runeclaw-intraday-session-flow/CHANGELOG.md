@@ -1,5 +1,13 @@
 # Changelog — RUNECLAW Intraday Session Flow
 
+## 2026-11-11 — conclusion: directional signal work stopped (docs only)
+Owner:       agreed to stop directional signal work under the current constraints.
+             No new data sources.
+Added:       CONCLUSION.md — decision, what was tested, what was learned, repository
+             state, and what would reopen the work.
+Status:      default configuration unchanged (v0.5 behaviour, kept as reference only).
+             Nothing is cleared for paper or live trading.
+
 ## v0.11.0 — 2026-11-11 — offline research: Signal D, hourly trend persistence
 Owner:       premise review accepted (null on the breakout line; one test of hourly trend
              persistence; data split and kill criteria as written; constraints unchanged;
