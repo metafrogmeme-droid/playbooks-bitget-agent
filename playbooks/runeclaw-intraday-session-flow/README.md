@@ -1,4 +1,4 @@
-# RUNECLAW Intraday Session Flow (v0.10)
+# RUNECLAW Intraday Session Flow (v0.11)
 
 Day-trading Playbook for the most liquid Bitget USDT-M perpetuals. The universe
 is every contract that passed the liquidity scan (24h volume ≥ 200M USDT,

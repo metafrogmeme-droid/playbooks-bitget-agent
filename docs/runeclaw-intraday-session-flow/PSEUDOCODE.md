@@ -1,4 +1,4 @@
-# RUNECLAW Intraday Session Flow — rule pseudo-code (v0.10)
+# RUNECLAW Intraday Session Flow — rule pseudo-code (v0.11)
 
 All times UTC. `now` is the close time of the last completed 15-minute bar
 (replay) or the wall clock at the scheduled run (live, every 15 minutes).
@@ -136,6 +136,18 @@ SHORT if trigger down and bias ∈ {down, flat}: limit = close ; stop = range_hi
 target = entry ± signal_c_target_r (1.0) · R ; expiry = signal_c_expiry_minutes (30) ; no trailing
 ```
 One attempt per symbol per session: if the trigger bar is blocked by a gate, the session is skipped.
+
+## 6c. Signal D — hourly trend persistence (research option, off by default)
+
+```
+at the 15m bar that completes a clock hour (all four 15m bars present):
+    body = hour_close − hour_open ; atr = Wilder ATR(signal_d_atr_period) of completed 1H bars
+    ret  = hour_close / close signal_d_lookback_hours completed hours earlier − 1
+    gate = risk.hold_fits(now): time_stop_minutes fits before the next pre-funding flatten and the end-of-day flatten
+LONG  if gate and body ≥  signal_d_body_atr·atr and ret > 0: limit = close ; stop = close − signal_d_stop_atr·atr
+SHORT if gate and body ≤ −signal_d_body_atr·atr and ret < 0: limit = close ; stop = close + signal_d_stop_atr·atr
+target = entry ± signal_d_target_r·R ; expiry = signal_d_expiry_minutes ; no trailing ; normal exit = time stop
+```
 
 ## 7. Sizing (risk.size_from_risk) and order placement
 
